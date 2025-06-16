@@ -1,0 +1,1 @@
+from .hunglin_models import Frase, Persona, PersonasLista, Casa, CasasLista, Grado
