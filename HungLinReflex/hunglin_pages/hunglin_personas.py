@@ -1,69 +1,7 @@
 import reflex as rx
 import icecream as ic
-from ..service.hunglin_page import HunglinState
 
-def mostrar_persona(persona) -> rx.Component:
-	return rx.table.row(
-		rx.table.cell(
-			persona[1], 
-			style={'color':'black'}
-		),
-		rx.table.cell(
-			rx.hstack(
-				rx.image(
-					src=persona[2],
-					width='4vw',
-				),
-				persona[3], 
-				style={'color':'black'}
-			),
-		),
-		rx.table.cell(
-			rx.hstack(
-				persona[4], 
-				style={'color':'black'}
-			),
-		),
-		rx.table.cell(
-			rx.hstack(
-				persona[5], 
-				style={'color':'black'}
-			),
-		),
-		rx.table.cell(
-			rx.hstack(
-				rx.button(
-					rx.icon('pen')
-				),
-				rx.button(
-					rx.icon('receipt-text'),
-					on_click=HunglinState.set_opcion('PeD', persona[0])
-				),
-				rx.link(
-					rx.button(
-						rx.icon(
-							'notebook-pen',
-						),
-					),
-					href='/personaslista'
-				),
-				rx.link(
-					rx.button(
-						rx.icon(
-							'receipt-text',
-						),
-					),
-					href='/personaslista'
-				),
-				
-		# 		rx.button(
-		# 			rx.icon(
-		# 				'users'
-		# 			)
-		# 		)
-			)
-		)
-	)
+
 
 def fnc_personas_detalles(detalles: tuple, eventos: list, extras: list) -> rx.Component:
 	return rx.box(

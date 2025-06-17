@@ -9,7 +9,7 @@ from ..models.hunglin_models import Frase, PersonasLista
 from ..service.hunglin_service import get_frase_service, chk_usuario_service, \
 		get_personas_service, get_persona_detalles_service, get_casas_service
 # from ..hunglin_base import definiciones
-from ..hunglin_pages.hunglin_personas import fnc_personas_detalles, mostrar_persona
+from ..hunglin_pages.hunglin_personas import fnc_personas_detalles
 from ..hunglin_pages.hunglin_casas import fnc_casas
 from rxconfig import config
 
@@ -98,6 +98,21 @@ class HunglinState(rx.State):
 	# 		self.casa, self.responsables = get_casa_detalles_service(id)
 
 
+# opciones
+# @rx.event(background=True)
+#async 
+def fnc_set_opcion(opc: str, id: int):
+	# async with self:
+	HunglinStateopcion = opc
+	if (opc == 'Im'):
+		HunglinState.nombre = ''
+	elif (opc == 'Pe'):
+		HunglinState.personas = get_personas_service(id, '', 1)
+	elif (opc == 'PeD'):
+		HunglinState.detalles, HunglinState.eventos, HunglinState.extras = get_persona_detalles_service(id)
+	elif (opc == 'Ca'):
+		HunglinState.casas = get_casas_service()
+
 
 @rx.page(route='/', on_load=HunglinState.get_frase)
 def hunglin_page() -> rx.Component:
@@ -119,23 +134,26 @@ def hunglin_page() -> rx.Component:
 	)
 
 def show_frase() -> rx.Component:
-	return rx.vstack(
+	return rx.center(
+		rx.vstack(
 			rx.text(
 				HunglinState.frase, 
-				style={ 'color':'black' },
+				style={ 'color':'white' },
 				size='5',
-				align='center', as_='div',
+				# align='center', as_='div',
 				width='70vw'
 			),
 			rx.text(
 				HunglinState.detalle, 
-				style={ 'color':'black' },
+				style={ 'color':'white' },
 				size='4',
 				align='center', as_='div',
 				width='70vw'
 			),
-			margin_x='5vw'
+			margin_x='6vw',
+			background_color ='#801316',
 		),
+	)
 
 def fnc_imagen() -> rx.Component:
 	return	rx.center(
@@ -143,7 +161,6 @@ def fnc_imagen() -> rx.Component:
 			src=rx.asset('bosquetaoista/EscuelaTaoistaHungLin.jpg'),
 			width='70vw',
 			margin_y='1vw',
-			# padding='1vw'
 		),
 	)
 
@@ -289,68 +306,68 @@ def fnc_personas() -> rx.Component:
 		height='auto'
 	)
 
-# def mostrar_persona(persona) -> rx.Component:
-# 	return rx.table.row(
-# 		rx.table.cell(
-# 			persona[1], 
-# 			style={'color':'black'}
-# 		),
-# 		rx.table.cell(
-# 			rx.hstack(
-# 				rx.image(
-# 					src=persona[2],
-# 					width='4vw',
-# 				),
-# 				persona[3], 
-# 				style={'color':'black'}
-# 			),
-# 		),
-# 		rx.table.cell(
-# 			rx.hstack(
-# 				persona[4], 
-# 				style={'color':'black'}
-# 			),
-# 		),
-# 		rx.table.cell(
-# 			rx.hstack(
-# 				persona[5], 
-# 				style={'color':'black'}
-# 			),
-# 		),
-# 		rx.table.cell(
-# 			rx.hstack(
-# 				rx.button(
-# 					rx.icon('pen')
-# 				),
-# 				rx.button(
-# 					rx.icon('receipt-text'),
-# 					on_click=HunglinState.set_opcion('PeD', persona[0])
-# 				),
-# 				rx.link(
-# 					rx.button(
-# 						rx.icon(
-# 							'notebook-pen',
-# 						),
-# 					),
-# 					href='/personaslista'
-# 				),
-# 				rx.link(
-# 					rx.button(
-# 						rx.icon(
-# 							'receipt-text',
-# 						),
-# 					),
-# 					href='/personaslista'
-# 				),
+def mostrar_persona(persona) -> rx.Component:
+	return rx.table.row(
+		rx.table.cell(
+			persona[1], 
+			style={'color':'black'}
+		),
+		rx.table.cell(
+			rx.hstack(
+				rx.image(
+					src=persona[2],
+					width='4vw',
+				),
+				persona[3], 
+				style={'color':'black'}
+			),
+		),
+		rx.table.cell(
+			rx.hstack(
+				persona[4], 
+				style={'color':'black'}
+			),
+		),
+		rx.table.cell(
+			rx.hstack(
+				persona[5], 
+				style={'color':'black'}
+			),
+		),
+		rx.table.cell(
+			rx.hstack(
+				rx.button(
+					rx.icon('pen')
+				),
+				rx.button(
+					rx.icon('receipt-text'),
+					on_click=HunglinState.set_opcion('PeD', persona[0])
+				),
+				rx.link(
+					rx.button(
+						rx.icon(
+							'notebook-pen',
+						),
+					),
+					href='/personaslista'
+				),
+				rx.link(
+					rx.button(
+						rx.icon(
+							'receipt-text',
+						),
+					),
+					href='/personaslista'
+				),
 				
-# 		# 		rx.button(
-# 		# 			rx.icon(
-# 		# 				'users'
-# 		# 			)
-# 		# 		)
-# 			)
-# 		)
-# 	)
+		# 		rx.button(
+		# 			rx.icon(
+		# 				'users'
+		# 			)
+		# 		)
+			)
+		)
+	)
 
 
 # def fnc_personas_detalles() -> rx.Component:

@@ -1,7 +1,7 @@
 import reflex as rx
 
 def fnc_casas(casas) -> rx.Component:
-	return rx.box(
+	return rx.center(
 		rx.box(
 			# menu(),
 			rx.heading('CASAS', margin_x='1vw', style={'color':'black'}),
@@ -20,9 +20,9 @@ def fnc_casas(casas) -> rx.Component:
 				),
 			),
 			background_color ='#fff',
-			width='80vw',
+			width='70vw',
 			height='auto',
-			margin_x='15vw',
+			# margin_x='1vw',
 			padding_bottom='1vw',
 		),
 		background_color ='#801316',

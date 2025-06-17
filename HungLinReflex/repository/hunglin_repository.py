@@ -55,7 +55,7 @@ def get_persona_detalles(id: int):
 
 	q1 = f'select CONCAT(A.apellido, ", ", A.nombre), A.id, A.orden, B.nombre AS estado,  C.nombre AS grado, D.nombre AS casa_practica, "---" as responsable_casa, A.direccion, A.localidad, A.email, A.fechanacimiento, A.fechaingreso, A.fechaegreso, E.nombre as tipodoc, A.nrodoc, CASE WHEN A.foto IS NULL then "/bosquetaoista/nophoto.jpg" ELSE CONCAT("/fotos/img_", A.apellido, "_", LPAD(A.orden, 4, "0"), "_low.jpg") END as foto, CASE WHEN A.certificado IS NULL then "/bosquetaoista/nocert.png" ELSE CONCAT("/certificados/cer_", A.apellido, "_", LPAD(A.orden, 4, "0"), ".jpg") END AS cert, CONCAT("**", IF (A.is_superuser = 1, "Superuser**", ""), IF (A.is_staff = 1, "Staff**", "")) as privilegios FROM bosquetaoista_persona A, bosquetaoista_tipoestado B, bosquetaoista_grado C, bosquetaoista_casa D, bosquetaoista_tipodoc E WHERE A.id = {id} AND A.responsable_casa_id IS NULL AND B.id = A.estado_id AND C.id = A.grado_id AND D.id = A.casa_practica_id AND E.id = A.tipodoc_id union select CONCAT(A.apellido, ", ", A.nombre), A.id, A.orden, B.nombre AS estado,  C.nombre AS grado, D.nombre AS casa_practica, F.nombre as responsable_casa, A.direccion, A.localidad, A.email, A.fechanacimiento, A.fechaingreso, A.fechaegreso, E.nombre as tipodoc, A.nrodoc, CASE WHEN A.foto IS NULL then "/bosquetaoista/nophoto.jpg" ELSE CONCAT("/fotos/img_", A.apellido, "_", LPAD(A.orden, 4, "0"), "_low.jpg") END as foto, CASE WHEN A.certificado IS NULL then "/bosquetaoista/nocert.png" ELSE CONCAT("/certificados/cer_", A.apellido, "_", LPAD(A.orden, 4, "0"), ".jpg") END AS cert, CONCAT("**", IF (A.is_superuser = 1, "Superuser**", ""), IF (A.is_staff = 1, "Staff**", "")) as privilegios FROM bosquetaoista_persona A, bosquetaoista_tipoestado B, bosquetaoista_grado C, bosquetaoista_casa D, bosquetaoista_tipodoc E, bosquetaoista_casa F WHERE A.id = {id} AND B.id = A.estado_id AND C.id = A.grado_id AND D.id = A.casa_practica_id AND E.id = A.tipodoc_id and F.id = A.responsable_casa_id ' 
 	cursor.execute(q1) 
-	persona_detalles = cursor.fetchone()
+	detalles = cursor.fetchone()
 
 	q1 = f'SELECT D.nombre, C.nombre, B.fecha, CONCAT(E.apellido, ", ", E.nombre), F.nombre FROM bosquetaoista_cursante A, bosquetaoista_agenda B, bosquetaoista_evento C, bosquetaoista_tipoevento D, bosquetaoista_persona E, bosquetaoista_tipocursante F WHERE A.persona_id = {id} AND B.id = A.agenda_id AND c.id = B.evento_id AND D.id = C.tipo_id AND E.id = B.orador_id AND F.id = A.tipocursante_id'
 	cursor.execute(q1)
@@ -65,7 +65,7 @@ def get_persona_detalles(id: int):
 	cursor.execute(q1)
 	extras = cursor.fetchall()
 
-	return(persona_detalles, eventos, extras)
+	return(detalles, eventos, extras)
 
 
 #### Casas

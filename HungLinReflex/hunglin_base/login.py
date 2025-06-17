@@ -28,7 +28,6 @@ from ..service.hunglin_page import HunglinState
 	# 			self.login = True
 
 
-# @rx.page(fnc_login, route='/login')
 def fnc_login() -> rx.Component:
 	return rx.box(
 		rx.center(
@@ -51,7 +50,6 @@ def fnc_login() -> rx.Component:
 				),
 				rx.button(
 					'Ingresar',
-					# on_click=LogininState.ingresar,
 					width='16vw',
 				)
 			)
