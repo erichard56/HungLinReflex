@@ -130,20 +130,18 @@ class State(rx.State):
 	@rx.event(background=True)
 	async def evt_persona_am(self, id):
 		async with self:
+			self.tipoestados = db_get_tipoestados()
+			self.grados = db_get_grados()
+			self.casaspr = db_get_casas()
+			self.tipodocs = db_get_tipodocs()
 			if (id != 0):
 				self.persona = db_get_persona(id)
-				print(self.persona)
+				self.tipoestado = self.persona[1]
+				self.grado = self.persona[6]
+				self.casa1 = self.persona[7]
+				self.tipodoc = self.persona[17]
 			else:
 				self.persona = (0, '', '')
-
-			self.tipoestados = db_get_tipoestados()
-			self.tipoestado = self.persona[1]
-			self.grados = db_get_grados()
-			self.grado = self.persona[6]
-			self.casaspr = db_get_casas()
-			self.casa1 = self.persona[7]
-			self.tipodocs = db_get_tipodocs()
-			self.tipodoc = self.persona[17]
 			self.opc = "pam"
 
 	@rx.event
@@ -390,7 +388,6 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.input(placeholder=persona[15], type='date', default_value=persona[15], name='fechaegreso', style={'width':'200px'}),
 							rx.input(placeholder=persona[15], type='date', name='fechaegreso', style={'width':'200px'}),
 						),
-						rx.input(placeholder=persona[15], type='date', default_value=persona[15], name='fechaegreso', style={'width':'200px'}),
 					),
 					rx.hstack(
 						rx.text('Celular: '),
@@ -463,7 +460,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 								rx.hstack(
 									rx.upload(
 										rx.image(src=persona[23], width='150px', high='auto'), 
-										rx.text('Click para cambiar'), id='upload_cert', name='foto'
+										rx.text('Click para cambiar'), id='upload_cert', name='certificado'
 									)
 								),
 								rx.hstack(

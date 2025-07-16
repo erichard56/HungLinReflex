@@ -99,15 +99,66 @@ def db_get_personas():
 	return(personas)
 
 def db_put_persona(pers):
-	# if (int(id) != 0):
-	# 	q1 =  f'UPDATE bosquetaoista_casa SET nombre="{nombre}", direccion="{direccion}" WHERE id={id}'
-	# else:
-	# 	q1 =  f'INSERT INTO bosquetaoista_casa VALUES (0, "{nombre}", "{direccion}")'
-	print(pers)
 	id = pers['id']
 	if (int(id) == 0):
-		q1 = f'INSERT INTO bosquetaoista_persona ('
-		valores = '('
+		q1 = f'INSERT INTO bosquetaoista_persona (id, '
+		valores = '(0 '
+		for key, value in pers.items():
+			match key:
+				case 'id':
+					pass
+
+				case 'estado':
+					q2 = f'SELECT * FROM bosquetaoista_tipoestado WHERE nombre = "{value}"'
+					cursor.execute(q2)
+					estado = cursor.fetchone()[0]
+					q1 += f', estado_id '
+					valores += f', {estado}'
+
+				case 'grado':
+					q2 = f'SELECT * FROM bosquetaoista_grado WHERE nombre = "{value}"'
+					cursor.execute(q2)
+					grado = cursor.fetchone()[0]
+					q1 += f', grado_id'
+					valores += f', {grado}'
+					
+				case 'casapractica':
+					q2 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
+					cursor.execute(q2)
+					casa = cursor.fetchone()[0]
+					q1 += f', casa_practica_id'
+					valores += f', {casa}'
+					
+				case 'responsablecasa':
+					if (value != ''):
+						q2 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
+						cursor.execute(q2)
+						responsablecasa = cursor.fetchone()[0]
+						q1 += f', responsable_casa_id'
+						valores += f', {responsablecasa}'
+					
+				case 'tipodoc':
+					q2 = f'SELECT * FROM bosquetaoista_tipodoc WHERE nombre = "{value}"'
+					cursor.execute(q2)
+					tipodoc = cursor.fetchone()[0]
+					q1 += f', tipodoc_id'
+					valores += f', {tipodoc}'
+
+				case 'is_superuser':
+					q1 += f', is_superuser'
+					valores += f', 1'
+
+				case 'is_staff':
+					q1 += f', is_staff'
+					valores += f', 1'
+
+				case _:
+					if (key not in ['id', 'upload_foto', 'upload_cert']):
+						q1 += f', {key}'
+						valores += f', \"{value}\"'
+		q1 += f') VALUES ('
+		valores += ')'
+		q1 += valores
 	else:
 		q1 = f'UPDATE bosquetaoista_persona SET'
 		for key, value in pers.items():
@@ -153,10 +204,10 @@ def db_put_persona(pers):
 					q1 += f' is_staff = 1, '
 
 				case _:
-					if (key not in ['id', 'upload']):
+					if (key not in ['id', 'upload_cert']):
 						q1 += f' {key} = \"{value}\",'
 		q1 += f' WHERE id ={id}'
-		print(q1)			
+	print(q1)
 
 	# cursor.execute(q1)
 	# conn.commit()
