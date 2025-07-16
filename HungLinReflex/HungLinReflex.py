@@ -1,8 +1,9 @@
 import reflex as rx
 import asyncio
 
-from .db import db_get_usuario, db_get_casas, db_get_casa, db_upd_casa, db_get_frase, db_get_alumnos
-from .db import db_get_personas, db_get_persona
+from .db import db_get_usuario, db_get_casas_full, db_get_casa, db_put_casa, db_get_frase, db_get_alumnos
+from .db import db_get_personas, db_get_persona, db_get_tipoestados, db_get_grados, db_get_casas, db_get_tipodocs
+from .db import db_put_persona
 from .notify import notify_component
 
 from rxconfig import config
@@ -22,8 +23,15 @@ class State(rx.State):
 	alumnos: list[tuple]
 	personas: list[tuple]
 	persona: tuple
-	tipoestado: list[tuple]
-
+	tipoestados: list
+	tipoestado: str
+	grados: list
+	grado: str
+	casaspr: list
+	tipodocs: list
+	tipodoc: str
+	casa1: str
+	uploaded_files: list[str] = []
 
 # handle's
 	@rx.event()
@@ -54,13 +62,32 @@ class State(rx.State):
 		async with self:
 			self.form_data = form_data
 			if (form_data['nombre'] and form_data['direccion']):
-				casa = db_upd_casa(form_data['id'], form_data['nombre'], form_data['direccion'])
-				self.casas = db_get_casas()
+				casa = db_put_casa(form_data['id'], form_data['nombre'], form_data['direccion'])
+				self.casas = db_get_casas_full()
 				self.opc = 'cas'
 			else:
 				self.error = 'Falta nombre o direccion'
 		if (self.error != ''):
 			await self.handle_notify()
+
+	@rx.event(background=True)
+	async def handle_persona_am(self, form_data: dict):
+		async with self:
+			form_persona = form_data
+			persona = db_put_persona(form_data)
+			self.personas = db_get_personas()
+			self.opc = 'per'
+		if (self.error != ''):
+			await self.handle_notify()
+
+	@rx.event()
+	def evt_tipoestado(self, value: str):
+		self.tipoestado = value
+
+	@rx.event()
+	def evt_grado(self, value: str):
+		self.grado = value
+
 
 # eventos casas
 	@rx.event(background=True)
@@ -76,16 +103,24 @@ class State(rx.State):
 	async def evt_casa_detalle(self, id):
 		async with self:
 			self.casap, self.responsables, self.alumnos = db_get_alumnos(id)
-			print(self.casap, self.responsables, self.alumnos)
 			self.opc = "cad"
 
 	@rx.event(background=True)
 	async def evt_casas(self):
 		async with self:
-			self.casas = db_get_casas()
+			self.casas = db_get_casas_full()
 			self.opc = "cas"
 
 # eventos persona
+	@rx.event(background=True)
+	async def evt_persona_am(self, id):
+		async with self:
+			if (id != 0):
+				self.persona = db_get_persona(id)
+			else:
+				self.persona = (0, '', '')
+			self.opc = "pam"
+
 	@rx.event(background=True)
 	async def evt_personas(self):
 		async with self:
@@ -96,10 +131,28 @@ class State(rx.State):
 	async def evt_persona_am(self, id):
 		async with self:
 			if (id != 0):
-				self.persona, self.tipoestado = db_get_persona(id)
+				self.persona = db_get_persona(id)
+				print(self.persona)
 			else:
 				self.persona = (0, '', '')
+
+			self.tipoestados = db_get_tipoestados()
+			self.tipoestado = self.persona[1]
+			self.grados = db_get_grados()
+			self.grado = self.persona[6]
+			self.casaspr = db_get_casas()
+			self.casa1 = self.persona[7]
+			self.tipodocs = db_get_tipodocs()
+			self.tipodoc = self.persona[17]
 			self.opc = "pam"
+
+	@rx.event
+	async def handle_foto(self, files: list[rx.UploadFile]):
+		for file in files:
+			data = await file.read()
+			path = rx.get_upload_dir() / file.name
+			# with path.open('wb') as f:
+			# 	f.write(data)
 
 # eventos varios
 	@rx.event(background=True)
@@ -145,6 +198,7 @@ def index() -> rx.Component:
 			State.error != '',
 			notify_component(State.error, 'shield_alert', 'yellow'),
 		),
+		# style={'background_color':'#801316'},
 	)
 
 #################
@@ -217,7 +271,7 @@ def fnc_casa_am(casa) -> rx.Component:
 		margin_y='2vw'
 	)
 
-def fnc_casa_alumno(alumno: list) -> rx.Component:
+def fnc_casa_alumno(alumno) -> rx.Component:
 	return rx.table.row(
 		rx.table.cell(alumno[1]),
 		rx.table.cell(
@@ -276,37 +330,12 @@ def fnc_persona_am(persona: list) -> rx.Component:
 					rx.input(value=persona[0],  type='text', name='id', style={'width':'0px', 'height':'0px'}),
 				),
 				rx.vstack(
-					# 	<tr>
-					# 		<td style="width: 10px"></td>
-					# 		<td>Estado:</td>
-					# 		<td>
-					# 			<select name="estado" style="width: 100px;">
-					# 				{% for estado in estados %}
-					# 					<option value="{{estado.id}}" 
-					# 						{% if estado.id == persona.estado_id %} selected {% endif %}>{{estado.nombre}}</option>
-					# 				{% endfor %}
-					# 			</select>
-					# 		</td>
-					# 		<td>Orden:</td>
-					# 		<td><input type="number" name="orden" value={{ persona.orden }} style="width: 100px;" required="" disabled></td>
-					# 	</tr>
 					rx.hstack(
-						rx.card(
 						rx.text('Estado: '),
-						rx.input(placeholder=persona[1], type='text', default_value=persona[1], name='estado', style={'width':'200px'}),
-						),
-						rx.card(
+						rx.select(State.tipoestados, default_value=persona[1], name='estado'), 
 						rx.text('Orden: '),
-						rx.input(placeholder=persona[2], type='numeric', default_value=persona[2], name='orden', style={'width':'200px'}),
-						)
+						rx.input(placeholder=persona[2], type='number', default_value=persona[2], name='orden', style={'width':'50px'}),
 					),
-					# 	<tr>
-					# 		<td style="width: 10px"></td>
-					# 		<td>Apellido:</td>
-					# 		<td><input type="text" name="apellido" value="{{ persona.apellido }}" style="width: 200px;" maxlength="100" required=""></td>
-					# 		<td>Nombre:</td>
-					# 		<td><input type="text" name="nombre" value="{{ persona.nombre }}" style="width: 200px;" maxlength="100" required=""></td>
-					# 	</tr>
 					rx.hstack(
 						rx.hstack(
 							rx.text('Apellido: '),
@@ -315,147 +344,70 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.input(placeholder=persona[4], type='text', default_value=persona[4], name='nombre', style={'width':'200px'}),
 						)
 					),
-					# 	<tr>
-					# 		<td style="width: 10px"></td>
-					# 		<td>Usuario:</td>
-					# 		<td><input type="text" name="usuario" value="{{ persona.usuario }}" style="width: 200px;" maxlength="50" 
-					# 			{% if operador.is_superuser != 1 %} disabled {% endif %}></td>
-					# 		<td>Grado:</td>
-					# 		<td>
-					# 			<select name="grado" style="width: 200px;">
-					# 				{% for grado in grados %}
-					# 					<option value="{{ grado.id }}" 
-					# 						{% if grado.id == persona.grado_id %} selected {% endif %}>{{ grado.nombre }}</option>
-					# 				{% endfor %}
-					# 			</select>
-					# 		</td>
-					# 	</tr>
 					rx.hstack(
 						rx.text('Usuario: '),
-						rx.input(placeholder=persona[5], type='text', default_value=persona[5], name='usuario', style={'width':'200px'}),
+						rx.cond(
+							State.is_superuser != 1,
+								rx.input(placeholder=persona[5], type='text', default_value=persona[5], name='usuario', disabled=True, style={'width':'200px'}),
+								rx.input(placeholder=persona[5], type='text', default_value=persona[5], name='usuario', style={'width':'200px'}),
+						),
 						rx.text('Grado: '),
-						rx.input(placeholder=persona[6], type='text', default_value=persona[6], name='grado', style={'width':'200px'}),
+						rx.select(State.grados, default_value=persona[6], name='grado'),
 					),
-					# 	<tr>
-					# 		<td style="width: 10px"></td>
-					# 		<td>Casa Práctica:</td>
-					# 		<td>
-					# 			<select name="casa_practica" style="width: 200px;">
-					# 				{% for casa in casas %}
-					# 					<option value="{{ casa.id }}" 
-					# 						{% if casa.id == persona.casa_practica_id %} selected {% endif %}>{{ casa.nombre }}</option>
-					# 				{% endfor %}
-					# 			</select>
-					# 		</td>
-					# 		<td>Responsable Casa:</td>
-					# 		<td>
-					# 			<select name="responsable_casa" style="width: 200px;">
-					# 				<option value="0">----</option>
-					# 				{% for casa in casas %}
-					# 					<option value="{{ casa.id }}" 
-					# 						{% if casa.id == persona.responsable_casa_id %} selected {% endif %}>{{ casa.nombre }}</option>
-					# 				{% endfor %}
-					# 			</select>
-					# 		</td>
-					# 	</tr>
 					rx.hstack(
 						rx.text('Casa de Practica: '),
-						rx.input(placeholder=persona[7], type='text', default_value=persona[7], name='casa_practica', style={'width':'200px'}),
+						rx.select(State.casaspr, default_value=persona[7], name='casapractica'), 
 						rx.text('Responsable Casa: '),
-						rx.input(placeholder=persona[8], type='text', default_value=persona[8], name='responsable_casa', style={'width':'200px'}),
-					),
+						rx.cond(
+							persona[8],
+							rx.select(State.casaspr, default_value=persona[8], name='responsablecasa', required=False), 
+							rx.select(State.casaspr, default_value=None, name='responsablecasa', required=False), 
 
-					# 	<tr>
-					# 		<td style="width: 10px"></td>
-					# 		<td>Direccion:</td>
-					# 		<td><input type="text" name="direccion" value="{{ persona.direccion }}" style="width: 300px;" maxlength="100" required=""></td>
-					# 		<td>Localidad:</td>
-					# 		<td><input type="text" name="localidad" value="{{ persona.localidad }}" style="width: 300px;" maxlength="100" required=""></td>
-					# 	</tr>
+						)
+					),
 					rx.hstack(
 						rx.text('Direccion: '),
 						rx.input(placeholder=persona[9], type='text', default_value=persona[9], name='direccion', style={'width':'200px'}),
 						rx.text('Localidad: '),
 						rx.input(placeholder=persona[10], type='text', default_value=persona[10], name='localidad', style={'width':'200px'}),
 					),
-
-					# 	<tr>
-					# 		<td style="width: 10px"></td>
-					# 		<td>Código Postal:</td>
-					# 		<td><input type="text" name="codigo_postal" value="{{ persona.codigo_postal }}" style="width: 200px;" maxlength="50" required=""></td>
-					# 		<td>Email:</td>
-					# 		<td><input type="email" name="email" value="{{ persona.email }}" style="width: 300px;" maxlength="100" required=""></td>
-					# 	</tr>
 					rx.hstack(
 						rx.text('Codigo Postal: '),
 						rx.input(placeholder=persona[11], type='text', default_value=persona[11], name='codigo_postal', style={'width':'200px'}),
 						rx.text('e-mail: '),
 						rx.input(placeholder=persona[12], type='text', default_value=persona[12], name='email', style={'width':'200px'}),
 					),
-
-		# 	<tr>
-		# 		<td style="width: 10px"></td>
-		# 		<td>Fecha Nacimiento:</td>
-		# 		<td><input type="date" name="fechanacimiento" value="{{ persona.fechanacimiento }}" style="width: 200px;" maxlength="50" required=""></td>
-		# 		<td>Fecha Ingreso:</td>
-		# 		<td><input type="date" name="fechaingreso" value="{{ persona.fechaingreso }}" style="width: 200px;" maxlength="100" required=""></td>
-		# 	</tr>
 					rx.hstack(
 						rx.text('Fecha de Nacimiento: '),
 						rx.input(placeholder=persona[13], type='date', default_value=persona[13], name='fechanacimiento', style={'width':'200px'}),
 						rx.text('Fecha de Ingreso: '),
 						rx.input(placeholder=persona[14], type='date', default_value=persona[14], name='fechaingreso', style={'width':'200px'}),
 					),
+					rx.hstack(
+						rx.text('Fecha de Egreso: ', persona[15]),
+						rx.cond(
+							persona[15],
+							rx.input(placeholder=persona[15], type='date', default_value=persona[15], name='fechaegreso', style={'width':'200px'}),
+							rx.input(placeholder=persona[15], type='date', name='fechaegreso', style={'width':'200px'}),
+						),
+						rx.input(placeholder=persona[15], type='date', default_value=persona[15], name='fechaegreso', style={'width':'200px'}),
+					),
+					rx.hstack(
+						rx.text('Celular: '),
+						rx.input(placeholder=persona[16], type='text', default_value=persona[16], name='celular', style={'width':'200px'}),
+						rx.text('Documento: '),
+						rx.select(State.tipodocs, default_value=persona[17], name='tipodoc'), 
+						rx.input(placeholder=persona[18], type='text', default_value=persona[18], name='nrodoc', style={'width':'200px'}),
+					),
+					rx.hstack(
+						rx.text('Clave: '),
+						rx.input(placeholder=persona[19], type='password', default_value=persona[19], name='clave', style={'width':'200px'}),
+						rx.checkbox(name='is_superuser', label='Superusuario? ', default_checked=persona[20]),
+						rx.text('SuperUsuario? '),
+						rx.checkbox(name='is_staff', label='Staff? ', default_checked=persona[21]),
+						rx.text('Staff? '),
+					),
 
-
-
-
-
-					rx.button('Confirmar', type='submit', style={'width':'100%'})
-				),
-				on_submit=State.handle_casa_am,
-				reset_on_submit=True,
-			)
-		),
-		width='100%',
-		margin_y='2vw'
-	)
-		# 	<table>
-		# 	<tr>
-		# 		<td style="width: 10px"></td>
-		# 		<td>Fecha Egreso:</td>
-		# 		<td><input type="date" name="fechaegreso" value="{{ persona.fechaegreso }}" style="width: 200px;" maxlength="100"></td>
-		# 	</tr>
-		# 	<tr>
-		# 		<td style="width: 10px"></td>
-		# 		<td>Celular:</td>
-		# 		<td><input type="text" name="celular" value="{{ persona.celular }}" style="width: 200px;" maxlength="50" required=""></td>
-		# 		<td>Documento:</td>
-		# 		<td>
-		# 			<select name="tipodoc" style="width: 100px;">
-		# 				<option value="0">----</option>
-		# 				{% for tipodoc in tipodocs %}
-		# 					<option value="{{ tipodoc.id }}" 
-		# 						{% if tipodoc.id == persona.tipodoc_id %} selected {% endif %}>{{ tipodoc.nombre }}</option>
-		# 				{% endfor %}
-		# 			</select>
-		# 			<input type="number" name="nrodoc" value="{{ persona.nrodoc }}" style="width: 100px;" maxlength="150" required="">
-		# 		</td>
-		# 	</tr>
-		# 	<tr>
-		# 		<td style="width: 10px"></td>
-		# 		<td>Clave:</td>
-		# 		<td><input type="text" name="clave" value="" style="width: 200px;" maxlength="50" 
-		# 				{% if persona.id == 0 %} required {% endif %}></td>
-		# 		<td>
-		# 			<input type="checkbox" name="is_superuser" id="is_superuser_id" 
-		# 					{% if persona.is_superuser == 1 %} checked {% endif %} 
-		# 					{% if operador.is_superuser != 1 %} disabled {% endif %} >
-		# 			<label for="is_superuser_id">Es Superusuario</label><br>
-		# 			<input type="checkbox" name="is_staff" id="is_staff_id" {% if persona.is_staff %} checked {% endif %}>
-		# 			<label for="is_staff_id">Es Staff</label><br>
-		# 		</td>
-		# 	</tr>
 		# 	<tr>
 		# 		<td style="width: 10px"></td>
 		# 		<td>
@@ -489,7 +441,49 @@ def fnc_persona_am(persona: list) -> rx.Component:
 		# 			<input type="file" name="certificado" accept="image/*" id="id_certificado">
 		# 		</td>
 		# 	</tr>
-		# </table>
+					rx.hstack(
+						rx.hstack(
+							rx.vstack(
+								rx.hstack(
+									rx.upload(
+										rx.image(src=persona[22], width='150px', high='auto'), 
+										rx.text('Click para cambiar'), id='upload_foto', name='foto'
+									)
+								),
+								rx.hstack(
+									rx.text('Foto'),
+									rx.checkbox(name='eliminar_foto', label='Eliminar'),
+									rx.text('Eliminar'),
+								),
+								# rx.button('Nueva Foto', on_click=State.handle_foto(rx.upload_files(upload_id='upload'))),
+							),
+						),
+						rx.hstack(
+							rx.vstack(
+								rx.hstack(
+									rx.upload(
+										rx.image(src=persona[23], width='150px', high='auto'), 
+										rx.text('Click para cambiar'), id='upload_cert', name='foto'
+									)
+								),
+								rx.hstack(
+									rx.text('Certificado'),
+										rx.checkbox(name='eliminar_cert', label='Eliminar'),
+										rx.text('Eliminar'),
+									),
+								),
+						),
+					),
+					rx.button('Confirmar', type='submit', style={'width':'100%'})
+				),
+				on_submit=State.handle_persona_am,
+				reset_on_submit=True,
+			)
+		),
+		width='100%',
+		margin_y='1vw',
+	)
+
 
 def fnc_persona(persona: list) -> rx.Component:
 	return rx.table.row(
