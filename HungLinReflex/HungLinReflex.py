@@ -291,11 +291,14 @@ def fnc_persona_am(persona: list) -> rx.Component:
 					# 		<td><input type="number" name="orden" value={{ persona.orden }} style="width: 100px;" required="" disabled></td>
 					# 	</tr>
 					rx.hstack(
+						rx.card(
 						rx.text('Estado: '),
 						rx.input(placeholder=persona[1], type='text', default_value=persona[1], name='estado', style={'width':'200px'}),
+						),
+						rx.card(
 						rx.text('Orden: '),
 						rx.input(placeholder=persona[2], type='numeric', default_value=persona[2], name='orden', style={'width':'200px'}),
-
+						)
 					),
 					# 	<tr>
 					# 		<td style="width: 10px"></td>
