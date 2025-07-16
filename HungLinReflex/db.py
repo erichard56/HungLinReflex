@@ -160,54 +160,66 @@ def db_put_persona(pers):
 		valores += ')'
 		q1 += valores
 	else:
-		q1 = f'UPDATE bosquetaoista_persona SET'
+		q1 = f'UPDATE bosquetaoista_persona SET '
 		for key, value in pers.items():
 			match key:
 				case 'id':
-					pass
+					q1 += f'id={id}'
 
 				case 'estado':
 					q2 = f'SELECT * FROM bosquetaoista_tipoestado WHERE nombre = "{value}"'
 					cursor.execute(q2)
 					estado = cursor.fetchone()[0]
-					q1 += f' estado_id = {estado},'
+					q1 += f', estado_id = {estado}'
 
 				case 'grado':
 					q2 = f'SELECT * FROM bosquetaoista_grado WHERE nombre = "{value}"'
 					cursor.execute(q2)
 					grado = cursor.fetchone()[0]
-					q1 += f' grado_id = {grado},'
+					q1 += f', grado_id = {grado}'
 					
 				case 'casapractica':
 					q2 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
 					cursor.execute(q2)
 					casa = cursor.fetchone()[0]
-					q1 += f' casa_practica_id = {casa},'
+					q1 += f', casa_practica_id = {casa}'
 					
 				case 'responsablecasa':
 					if (value != ''):
 						q2 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
 						cursor.execute(q2)
 						responsablecasa = cursor.fetchone()[0]
-						q1 += f' responsable_casa_id = {responsablecasa},'
+						q1 += f', responsable_casa_id = {responsablecasa}'
 					
 				case 'tipodoc':
 					q2 = f'SELECT * FROM bosquetaoista_tipodoc WHERE nombre = "{value}"'
 					cursor.execute(q2)
 					tipodoc = cursor.fetchone()[0]
-					q1 += f' tipodoc_id = {tipodoc},'
+					q1 += f', tipodoc_id = {tipodoc}'
 
 				case 'is_superuser':
-					q1 += f' is_superuser = 1,'
+					q1 += f', is_superuser = 1'
 
 				case 'is_staff':
-					q1 += f' is_staff = 1, '
+					q1 += f', is_staff = 1'
+
+				case 'foto':
+					path = './assets/'
+					file = path + 'fotos/kkfoto.jpg'
+					with open(file, 'wb') as f:
+						f.write(pers['foto'])
+					q1 += f', foto='
+
+				case 'certificado':
+					file = './assets/certificados/kkcert.jpg'
+					with open(file, 'wb') as f:
+						f.write(pers['certificado'])
 
 				case _:
 					if (key not in ['id', 'upload_cert']):
-						q1 += f' {key} = \"{value}\",'
-		q1 += f' WHERE id ={id}'
-	print(q1)
+						q1 += f', {key} = \"{value}\"'
+		q1 += f' WHERE id = {id}'
+	# print(q1)
 
 	# cursor.execute(q1)
 	# conn.commit()

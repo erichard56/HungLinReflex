@@ -32,6 +32,9 @@ class State(rx.State):
 	tipodoc: str
 	casa1: str
 	uploaded_files: list[str] = []
+	foto: rx.UploadFile
+	cert: rx.UploadFile
+
 
 # handle's
 	@rx.event()
@@ -144,13 +147,6 @@ class State(rx.State):
 				self.persona = (0, '', '')
 			self.opc = "pam"
 
-	@rx.event
-	async def handle_foto(self, files: list[rx.UploadFile]):
-		for file in files:
-			data = await file.read()
-			path = rx.get_upload_dir() / file.name
-			# with path.open('wb') as f:
-			# 	f.write(data)
 
 # eventos varios
 	@rx.event(background=True)
@@ -322,24 +318,35 @@ def fnc_persona_am(persona: list) -> rx.Component:
 				margin_bottom='2vw',
 			),
 
-
-			rx.form(
-				rx.box(
+			# rx.table.root(
+				# rx.table.row(
+				# 	rx.table.column_header_cell(width='50%'),
+				# 	rx.table.column_header_cell(width='50%'),
+				# ),
+			# 	rx.table.body(
+			# 		rx.table.row(
+			# 			rx.table.cell('primera columna'),
+			# 			rx.table.cell('segunda columna')
+			# 		)
+			# 	)
+			# ),
+				rx.form(
+				# rx.box(
 					rx.input(value=persona[0],  type='text', name='id', style={'width':'0px', 'height':'0px'}),
-				),
+				# ),
 				rx.vstack(
 					rx.hstack(
-						rx.text('Estado: '),
+						rx.text('*Estado: '),
 						rx.select(State.tipoestados, default_value=persona[1], name='estado'), 
 						rx.text('Orden: '),
 						rx.input(placeholder=persona[2], type='number', default_value=persona[2], name='orden', style={'width':'50px'}),
 					),
 					rx.hstack(
 						rx.hstack(
-							rx.text('Apellido: '),
-							rx.input(placeholder=persona[3], type='text', default_value=persona[3], name='apellido', style={'width':'200px'}),
-							rx.text('Nombre: '),
-							rx.input(placeholder=persona[4], type='text', default_value=persona[4], name='nombre', style={'width':'200px'}),
+							rx.text('*Apellido: '),
+							rx.input(placeholder=persona[3], type='text', default_value=persona[3], name='apellido', required=True, style={'width':'200px'}),
+							rx.text('*Nombre: '),
+							rx.input(placeholder=persona[4], type='text', default_value=persona[4], name='nombre', required=True, style={'width':'200px'}),
 						)
 					),
 					rx.hstack(
@@ -404,78 +411,40 @@ def fnc_persona_am(persona: list) -> rx.Component:
 						rx.checkbox(name='is_staff', label='Staff? ', default_checked=persona[21]),
 						rx.text('Staff? '),
 					),
-
-		# 	<tr>
-		# 		<td style="width: 10px"></td>
-		# 		<td>
-		# 			{% if imagenes[0] %}
-		# 				<img src={{ imagenes[0] }} height='50' width='50' />
-		# 			{% else %}
-		# 				<img src="{{ url_for('static', filename='bosquetaoista/nophoto.jpg') }}" height='50' width='50' />
-		# 			{% endif %}
-		# 			<label for="id_foto">Foto:</label>
-		# 		</td>
-		# 		<td>
-		# 			<!-- Actual: <a href="/media/images/err_hX7dirl.jpg">{ { persona.foto }}</a> -->
-		# 			<input type="checkbox" name="foto_delete" id="foto_delete_id">
-		# 			<label for="foto_delete_id">Eliminar</label><br>
-		# 			<!-- Modificar: -->
-		# 			<input type="file" name="foto" accept="image/*" id="id_foto">
-		# 		</td>
-		# 		<td>
-		# 			{% if imagenes[1] %}
-		# 				<img src={{ imagenes[1] }} height='50' width='50' />
-		# 			{% else %}
-		# 				<img src="{{ url_for('static', filename='bosquetaoista/nocert.png') }}"" height='50' width='50' />
-		# 			{% endif %}
-		# 			<label for="id_certificado">Certif.:</label>
-		# 		</td>
-		# 		<td>
-		# 			<!-- Actual: <a href="/media/images/err_hX7dirl.jpg">{ { persona.certificado }}</a> -->
-		# 			<input type="checkbox" name="cert_delete" id="cert_delete_id">
-		# 			<label for="cert_delete_id">Eliminar</label><br>
-		# 			<!-- Modificar: -->
-		# 			<input type="file" name="certificado" accept="image/*" id="id_certificado">
-		# 		</td>
-		# 	</tr>
+					rx.divider(),
 					rx.hstack(
 						rx.hstack(
 							rx.vstack(
 								rx.hstack(
-									rx.upload(
-										rx.image(src=persona[22], width='150px', high='auto'), 
-										rx.text('Click para cambiar'), id='upload_foto', name='foto'
-									)
-								),
-								rx.hstack(
 									rx.text('Foto'),
+									rx.image(src=persona[22], width='160px', high='auto'),
+								),
+								rx.input(type='file', name='foto'),
+								rx.hstack(
 									rx.checkbox(name='eliminar_foto', label='Eliminar'),
 									rx.text('Eliminar'),
 								),
-								# rx.button('Nueva Foto', on_click=State.handle_foto(rx.upload_files(upload_id='upload'))),
 							),
 						),
 						rx.hstack(
 							rx.vstack(
 								rx.hstack(
-									rx.upload(
-										rx.image(src=persona[23], width='150px', high='auto'), 
-										rx.text('Click para cambiar'), id='upload_cert', name='certificado'
-									)
-								),
-								rx.hstack(
 									rx.text('Certificado'),
-										rx.checkbox(name='eliminar_cert', label='Eliminar'),
-										rx.text('Eliminar'),
-									),
+									rx.image(src=persona[23], width='150px', high='auto'),
 								),
+								rx.input(type='file', name='certificado'),
+								rx.hstack(
+									rx.checkbox(name='eliminar_cert', label='Eliminar'),
+									rx.text('Eliminar'),
+								),
+							),
 						),
 					),
 					rx.button('Confirmar', type='submit', style={'width':'100%'})
 				),
 				on_submit=State.handle_persona_am,
 				reset_on_submit=True,
-			)
+				)
 		),
 		width='100%',
 		margin_y='1vw',
