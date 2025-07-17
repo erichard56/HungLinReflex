@@ -174,7 +174,6 @@ def index() -> rx.Component:
 				State.nombre != '',
 				fnc_menu(),
 			),
-			
 			rx.match(
 				State.opc,
 				('img', fnc_imagen()),
@@ -307,7 +306,7 @@ def fnc_casa_alumnos(alumnos) -> rx.Component:
 #################
 
 def fnc_persona_am(persona: list) -> rx.Component:
-	return rx.center(
+	return rx.box(
 		rx.card(
 			rx.card(
 				rx.cond(
@@ -315,141 +314,213 @@ def fnc_persona_am(persona: list) -> rx.Component:
 					rx.text('NUEVA PERSONA', weight="bold", align='center'),
 					rx.text('MODIFICACION PERSONA', weight="bold", align='center')
 				),
-				margin_bottom='2vw',
 			),
-
-			# rx.table.root(
-				# rx.table.row(
-				# 	rx.table.column_header_cell(width='50%'),
-				# 	rx.table.column_header_cell(width='50%'),
-				# ),
-			# 	rx.table.body(
-			# 		rx.table.row(
-			# 			rx.table.cell('primera columna'),
-			# 			rx.table.cell('segunda columna')
-			# 		)
-			# 	)
-			# ),
-				rx.form(
-				# rx.box(
-					rx.input(value=persona[0],  type='text', name='id', style={'width':'0px', 'height':'0px'}),
-				# ),
-				rx.vstack(
-					rx.hstack(
-						rx.text('*Estado: '),
-						rx.select(State.tipoestados, default_value=persona[1], name='estado'), 
-						rx.text('Orden: '),
-						rx.input(placeholder=persona[2], type='number', default_value=persona[2], name='orden', style={'width':'50px'}),
-					),
-					rx.hstack(
-						rx.hstack(
-							rx.text('*Apellido: '),
-							rx.input(placeholder=persona[3], type='text', default_value=persona[3], name='apellido', required=True, style={'width':'200px'}),
-							rx.text('*Nombre: '),
-							rx.input(placeholder=persona[4], type='text', default_value=persona[4], name='nombre', required=True, style={'width':'200px'}),
-						)
-					),
-					rx.hstack(
-						rx.text('Usuario: '),
-						rx.cond(
-							State.is_superuser != 1,
-								rx.input(placeholder=persona[5], type='text', default_value=persona[5], name='usuario', disabled=True, style={'width':'200px'}),
-								rx.input(placeholder=persona[5], type='text', default_value=persona[5], name='usuario', style={'width':'200px'}),
-						),
-						rx.text('Grado: '),
-						rx.select(State.grados, default_value=persona[6], name='grado'),
-					),
-					rx.hstack(
-						rx.text('Casa de Practica: '),
-						rx.select(State.casaspr, default_value=persona[7], name='casapractica'), 
-						rx.text('Responsable Casa: '),
-						rx.cond(
-							persona[8],
-							rx.select(State.casaspr, default_value=persona[8], name='responsablecasa', required=False), 
-							rx.select(State.casaspr, default_value=None, name='responsablecasa', required=False), 
-
-						)
-					),
-					rx.hstack(
-						rx.text('Direccion: '),
-						rx.input(placeholder=persona[9], type='text', default_value=persona[9], name='direccion', style={'width':'200px'}),
-						rx.text('Localidad: '),
-						rx.input(placeholder=persona[10], type='text', default_value=persona[10], name='localidad', style={'width':'200px'}),
-					),
-					rx.hstack(
-						rx.text('Codigo Postal: '),
-						rx.input(placeholder=persona[11], type='text', default_value=persona[11], name='codigo_postal', style={'width':'200px'}),
-						rx.text('e-mail: '),
-						rx.input(placeholder=persona[12], type='text', default_value=persona[12], name='email', style={'width':'200px'}),
-					),
-					rx.hstack(
-						rx.text('Fecha de Nacimiento: '),
-						rx.input(placeholder=persona[13], type='date', default_value=persona[13], name='fechanacimiento', style={'width':'200px'}),
-						rx.text('Fecha de Ingreso: '),
-						rx.input(placeholder=persona[14], type='date', default_value=persona[14], name='fechaingreso', style={'width':'200px'}),
-					),
-					rx.hstack(
-						rx.text('Fecha de Egreso: ', persona[15]),
-						rx.cond(
-							persona[15],
-							rx.input(placeholder=persona[15], type='date', default_value=persona[15], name='fechaegreso', style={'width':'200px'}),
-							rx.input(placeholder=persona[15], type='date', name='fechaegreso', style={'width':'200px'}),
+			rx.form(
+				rx.table.root(
+					rx.table.header(
+						rx.table.row(
+							rx.table.column_header_cell(width='50%', height='0vw'),
+							rx.table.column_header_cell(width='50%', height='0vw'),
 						),
 					),
-					rx.hstack(
-						rx.text('Celular: '),
-						rx.input(placeholder=persona[16], type='text', default_value=persona[16], name='celular', style={'width':'200px'}),
-						rx.text('Documento: '),
-						rx.select(State.tipodocs, default_value=persona[17], name='tipodoc'), 
-						rx.input(placeholder=persona[18], type='text', default_value=persona[18], name='nrodoc', style={'width':'200px'}),
-					),
-					rx.hstack(
-						rx.text('Clave: '),
-						rx.input(placeholder=persona[19], type='password', default_value=persona[19], name='clave', style={'width':'200px'}),
-						rx.checkbox(name='is_superuser', label='Superusuario? ', default_checked=persona[20]),
-						rx.text('SuperUsuario? '),
-						rx.checkbox(name='is_staff', label='Staff? ', default_checked=persona[21]),
-						rx.text('Staff? '),
-					),
-					rx.divider(),
-					rx.hstack(
-						rx.hstack(
-							rx.vstack(
+					rx.table.body(
+						rx.input(value=persona[0],  type='text', name='id', style={'width':'0px', 'height':'0px'}),
+						rx.table.row(
+							rx.table.cell(
 								rx.hstack(
-									rx.text('Foto'),
-									rx.image(src=persona[22], width='160px', high='auto'),
+									rx.text('*Estado: '),
+									rx.select(State.tipoestados, default_value=persona[1], name='estado'),
 								),
-								rx.input(type='file', name='foto'),
+							),
+							rx.table.cell(
 								rx.hstack(
-									rx.checkbox(name='eliminar_foto', label='Eliminar'),
-									rx.text('Eliminar'),
+									rx.text('Orden: '),
+									rx.input(placeholder=persona[2], type='number', default_value=persona[2], name='orden', style={'width':'50px'}),
+								)
+							),
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.text('*Apellido: '),
+									rx.input(placeholder=persona[3], type='text', default_value=persona[3], name='apellido', required=True, style={'width':'200px'}),
+								),
+							),
+							rx.table.cell(
+								rx.hstack(
+									rx.text('*Nombre: '),
+									rx.input(placeholder=persona[4], type='text', default_value=persona[4], name='nombre', required=True, style={'width':'200px'}),
+								)
+							),
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Usuario: '),
+									rx.cond(
+										State.is_superuser != 1,
+										rx.input(placeholder=persona[5], type='text', default_value=persona[5], name='usuario', disabled=True, style={'width':'200px'}),
+										rx.input(placeholder=persona[5], type='text', default_value=persona[5], name='usuario', style={'width':'200px'}),
+									),
+								)
+							),
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Grado: '),
+									rx.select(State.grados, default_value=persona[6], name='grado'),
+								),
+							)
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Casa de Practica: '),
+									rx.select(State.casaspr, default_value=persona[7], name='casapractica'), 
+								),
+							),
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Responsable Casa: '),
+									rx.cond(
+										persona[8],
+										rx.select(State.casaspr, default_value=persona[8], name='responsablecasa', required=False), 
+										rx.select(State.casaspr, default_value=None, name='responsablecasa', required=False), 
+									)
+								),
+							)
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Direccion: '),
+									rx.input(placeholder=persona[9], type='text', default_value=persona[9], name='direccion', style={'width':'200px'}),
+								)
+							),
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Localidad: '),
+									rx.input(placeholder=persona[10], type='text', default_value=persona[10], name='localidad', style={'width':'200px'}),
+								)
+							)
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Codigo Postal: '),
+									rx.input(placeholder=persona[11], type='text', default_value=persona[11], name='codigo_postal', style={'width':'200px'}),
+								)
+							),
+							rx.table.cell(
+								rx.hstack(
+									rx.text('e-mail: '),
+									rx.input(placeholder=persona[12], type='text', default_value=persona[12], name='email', style={'width':'200px'}),
+								)
+							)
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Fecha de Nacimiento: '),
+									rx.input(placeholder=persona[13], type='date', default_value=persona[13], name='fechanacimiento', style={'width':'200px'}),
+								)
+							),
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Fecha de Ingreso: '),
+									rx.input(placeholder=persona[14], type='date', default_value=persona[14], name='fechaingreso', style={'width':'200px'}),
+								)
+							)
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Fecha de Egreso: ', persona[15]),
+									rx.cond(
+										persona[15],
+										rx.input(placeholder=persona[15], type='date', default_value=persona[15], name='fechaegreso', style={'width':'200px'}),
+										rx.input(placeholder=persona[15], type='date', name='fechaegreso', style={'width':'200px'}),
+									),
+								),
+							)
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Celular: '),
+									rx.input(placeholder=persona[16], type='text', default_value=persona[16], name='celular', style={'width':'200px'}),
+								)
+							),
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Documento: '),
+									rx.select(State.tipodocs, default_value=persona[17], name='tipodoc'), 
+									rx.input(placeholder=persona[18], type='text', default_value=persona[18], name='nrodoc', style={'width':'200px'}),
+								)
+							)
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.text('Clave: '),
+									rx.input(placeholder=persona[19], type='password', default_value=persona[19], name='clave', style={'width':'200px'}),
+								)
+							),
+							rx.table.cell(
+								rx.vstack(
+									rx.hstack(
+										rx.checkbox(name='is_superuser', label='Superusuario? ', default_checked=persona[20]),
+										rx.text('SuperUsuario? '),
+									),
+									rx.hstack(
+										rx.checkbox(name='is_staff', label='Staff? ', default_checked=persona[21]),
+										rx.text('Staff? '),
+									),
+								)
+							)
+						),
+						rx.table.row(
+							rx.table.cell(
+								rx.hstack(
+									rx.vstack(
+										rx.hstack(
+											rx.text('Foto'),
+											rx.image(src=persona[22], width='160px', high='auto'),
+										),
+										rx.input(type='file', name='foto'),
+										rx.hstack(
+											rx.checkbox(name='eliminar_foto', label='Eliminar'),
+											rx.text('Eliminar'),
+										),
+									),
+								),
+							),
+							rx.table.cell(
+								rx.hstack(
+									rx.vstack(
+										rx.hstack(
+											rx.text('Certificado'),
+											rx.image(src=persona[23], width='150px', high='auto'),
+										),
+										rx.input(type='file', name='certificado'),
+										rx.hstack(
+											rx.checkbox(name='eliminar_cert', label='Eliminar'),
+											rx.text('Eliminar'),
+										),
+									),
 								),
 							),
 						),
-						rx.hstack(
-							rx.vstack(
-								rx.hstack(
-									rx.text('Certificado'),
-									rx.image(src=persona[23], width='150px', high='auto'),
-								),
-								rx.input(type='file', name='certificado'),
-								rx.hstack(
-									rx.checkbox(name='eliminar_cert', label='Eliminar'),
-									rx.text('Eliminar'),
-								),
-							),
-						),
-					),
-					rx.button('Confirmar', type='submit', style={'width':'100%'})
+					)
 				),
+				rx.button('Confirmar', type='submit', style={'width':'100%'}),
 				on_submit=State.handle_persona_am,
 				reset_on_submit=True,
-				)
+
+			)
 		),
 		width='100%',
 		margin_y='1vw',
 	)
-
 
 def fnc_persona(persona: list) -> rx.Component:
 	return rx.table.row(
