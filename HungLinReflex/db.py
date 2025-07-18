@@ -1,6 +1,7 @@
 import mysql.connector
 import hashlib
 import random
+import uuid
 
 conn = mysql.connector.connect(user='hunglin', 
 								host='127.0.0.1', 
@@ -88,7 +89,6 @@ def db_get_alumnos(id: int):
 # personas
 def db_get_persona(id):
 	q1 = f'SELECT A.id, B.nombre as estado, A.orden, A.apellido, A.nombre, A.usuario, C.nombre as grado,  D.nombre as casa_practica, E.nombre as responsable_casa, A.direccion, A.localidad, A.codigo_postal, A.email, A.fechanacimiento, A.fechaingreso, A.fechaegreso, A.celular, F.nombre as tipodoc, A.nrodoc, A.clave, A.is_superuser, A.is_staff, CASE WHEN A.foto is NULL THEN "/bosquetaoista/nophoto.jpg" ELSE CONCAT("/", foto) END as foto, CASE WHEN A.certificado is NULL THEN "/bosquetaoista/nocert.png" ELSE CONCAT("/", certificado) END as certificado FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id INNER JOIN bosquetaoista_casa D on D.id = A.casa_practica_id LEFT JOIN bosquetaoista_casa E on E.id = A.responsable_casa_id LEFT JOIN bosquetaoista_tipodoc F on F.id = A.tipodoc_id WHERE A.id = {id}'
-	print('get_persona ', q1)
 	cursor.execute(q1)
 	persona = cursor.fetchone()
 	return(persona)
@@ -103,27 +103,26 @@ def db_put_persona(pers):
 	is_superuser = False
 	is_staff = False
 
-	try:
-		foto = pers['foto']
-		foto = f'./assets/fotos/img_{pers['apellido']}_' + str(pers['orden']).zfill(4) + '.jpg'
-	except:
-		foto = None
-
-	try:
-		cert = pers['certificado']
-		cert = f'./assets/certificados/cer_{pers['apellido']}_' + str(pers['orden']).zfill(4) + '.jpg'
-	except:
-		cert = None
+	print(pers)
 
 	id = pers['id']
 
+	qins = f'INSERT INTO bosquetaoista_persona (id '
+	valores = '(0 '
+	qupd = f'UPDATE bosquetaoista_persona SET '
+
+
 	if (int(id) == 0):
-		q1 = f'INSERT INTO bosquetaoista_persona (id, '
+		q1 = f'INSERT INTO bosquetaoista_persona (id '
 		valores = '(0 '
 		for key, value in pers.items():
 			match key:
 				case 'id':
-					pass
+					q2 = f'SELECT MAX(orden) from bosquetaoista_persona'
+					cursor.execute(q2)
+					orden = cursor.fetchone()[0]
+					q1 += f', orden '
+					valores += f', {orden}'
 
 				case 'estado':
 					q2 = f'SELECT * FROM bosquetaoista_tipoestado WHERE nombre = "{value}"'
@@ -153,7 +152,22 @@ def db_put_persona(pers):
 						responsablecasa = cursor.fetchone()[0]
 						q1 += f', responsable_casa_id'
 						valores += f', {responsablecasa}'
-					
+
+				case 'fechanacimiento':
+					if (len(pers['fechanacimiento']) > 0):
+						q1 += f', fechanacimiento'
+						valores +' f, \"{fechanacimiento}\"'
+
+				case 'fechaingreso':
+					if (len(pers['fechaingreso']) > 0):
+						q1 += f', ingreso'
+						valores +' f, \"{fechaingreso}\"'
+
+				case 'fechaegreso':
+					if (len(pers['fechaegreso']) > 0):
+						q1 += f', ingreso'
+						valores +' f, \"{fechaegreso}\"'
+
 				case 'tipodoc':
 					q2 = f'SELECT * FROM bosquetaoista_tipodoc WHERE nombre = "{value}"'
 					cursor.execute(q2)
@@ -167,24 +181,38 @@ def db_put_persona(pers):
 				case 'is_staff':
 					is_staff = True
 
+				case 'foto':
+					if (len(pers['foto']) > 0):
+						foto = 'images/' + str(uuid.uuid4()) + '.jpg'
+						with open('./assets/' + foto, 'wb') as f:
+							f.write(pers['foto'])
+						q1 += f', foto = "{foto}"'
+
+				case 'certificado':
+					if (len(pers['certificado']) > 0):
+						cert = 'certificados/' + str(uuid.uuid4()) + '.jpg'
+						with open('./assets/' + cert, 'wb') as f:
+							f.write(pers['certificado'])
+						q1 += f', certificado = "{cert}"'
+
 				case _:
-					if (key == 'id'):
+					if (key not in ['id', 'orden', 'fechanacimiento', 'fechaingreso', 'fechaegreso']):
 						q1 += f', {key}'
-						valores += f', \"{value}\"'
+						valores += f', TRIM(\"{value}\")'
 		q1 += f', is_superuser'
-		valores += ', '
 		if (is_superuser):
 			valores += ', 1'
 		else:
-			valores = ', 0'
+			valores += ', 0'
 		q1 += f', is_staff'
 		if (is_staff):
 			valores += ', 1'
 		else:
 			valores += ', 0'
-		q1 += f') VALUES ('
+		q1 += f') VALUES '
 		valores += ')'
 		q1 += valores
+
 	else:
 		q1 = f'UPDATE bosquetaoista_persona SET '
 		for key, value in pers.items():
@@ -223,9 +251,17 @@ def db_put_persona(pers):
 					tipodoc = cursor.fetchone()[0]
 					q1 += f', tipodoc_id = {tipodoc}'
 				
+				case 'fechanacimiento':
+					if (pers['fechanacimiento'] != ''):
+						q1 += f', fechanacimiento = \"{pers['fechanacimiento']}\"'
+
+				case 'fechaingreso':
+					if (pers['fechaingreso'] != ''):
+						q1 += f', fechaingreso = \"{pers['fechaingreso']}\"'
+
 				case 'fechaegreso':
 					if (pers['fechaegreso'] != ''):
-						q1 += f', fechaegreso = {pers['fechaegreso']}'
+						q1 += f', fechaegreso = \"{pers['fechaegreso']}\"'
 
 				case 'is_superuser':
 					is_superuser = True
@@ -234,18 +270,20 @@ def db_put_persona(pers):
 					is_staff = True
 
 				case 'foto':
-					with open(foto, 'wb') as f:
+					foto = 'images/' + str(uuid.uuid4()) + '.jpg'
+					with open('./assets/' + foto, 'wb') as f:
 						f.write(pers['foto'])
-					q1 += f', foto = "{foto[8:]}"'
+					q1 += f', foto = "{foto}"'
 
 				case 'certificado':
-					with open(cert, 'wb') as f:
+					cert = 'certificados/' + str(uuid.uuid4()) + '.jpg'
+					with open('./assets/' + cert, 'wb') as f:
 						f.write(pers['certificado'])
-					q1 += f', certificado = "{cert[8:]}"'
+					q1 += f', certificado = "{cert}"'
 
 				case _:
-					if (key not in ['id', 'fechaegreso']):
-						q1 += f', {key} = \"{value}\"'
+					if (key not in ['id']):
+						q1 += f', {key} = TRIM(\"{value}\")'
 		
 		q1 += f', is_superuser = '
 		if (is_superuser):
@@ -258,10 +296,10 @@ def db_put_persona(pers):
 		else:
 			q1 += '0'
 		q1 += f' WHERE id = {id}'
-	print(q1)
 
-	# cursor.execute(q1)
-	# conn.commit()
+	print('q1 ', q1)
+	cursor.execute(q1)
+	conn.commit()
 	return
 
 

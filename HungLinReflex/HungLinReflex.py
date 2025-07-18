@@ -480,12 +480,10 @@ def fnc_persona_am(persona: list) -> rx.Component:
 										rx.hstack(
 											rx.text('Foto'),
 											rx.image(src=persona[22], width='160px', high='auto'),
+											# rx.checkbox(name='eliminar_foto', label='Eliminar'),
+											# rx.text('Eliminar'),
 										),
 										rx.input(type='file', name='foto', accept="image/png, image/jpeg"),
-										rx.hstack(
-											rx.checkbox(name='eliminar_foto', label='Eliminar'),
-											rx.text('Eliminar'),
-										),
 									),
 								),
 							),
@@ -495,12 +493,10 @@ def fnc_persona_am(persona: list) -> rx.Component:
 										rx.hstack(
 											rx.text('Certificado'),
 											rx.image(src=persona[23], width='150px', high='auto'),
+											# rx.checkbox(name='eliminar_cert', label='Eliminar', justify_y='50px'),
+											# rx.text('Eliminar'),
 										),
 										rx.input(type='file', name='certificado', accept="image/png, image/jpeg"),
-										rx.hstack(
-											rx.checkbox(name='eliminar_cert', label='Eliminar'),
-											rx.text('Eliminar'),
-										),
 									),
 								),
 							),
