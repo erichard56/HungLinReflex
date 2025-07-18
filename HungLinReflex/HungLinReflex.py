@@ -252,8 +252,8 @@ def fnc_casa_am(casa) -> rx.Component:
 					rx.box(
 						rx.input(value=casa[0],  type='text', name='id', style={'width':'0px', 'height':'0px'}),
 					),
-					rx.input(placeholder=casa[1], type='text', default_value=casa[1], name='nombre', style={'width':'200px'}),
-					rx.input(placeholder=casa[2], type='text', default_value=casa[2], name='direccion', style={'width':'200px'}),
+					rx.input(type='text', default_value=casa[1], name='nombre', style={'width':'200px'}),
+					rx.input(type='text', default_value=casa[2], name='direccion', style={'width':'200px'}),
 					rx.button('Confirmar', type='submit', style={'width':'100%'})
 				),
 				on_submit=State.handle_casa_am,
@@ -308,13 +308,13 @@ def fnc_casa_alumnos(alumnos) -> rx.Component:
 def fnc_persona_am(persona: list) -> rx.Component:
 	return rx.box(
 		rx.card(
-			rx.card(
+			# rx.card(
 				rx.cond(
 					persona[0] == 0,
-					rx.text('NUEVA PERSONA', weight="bold", align='center'),
-					rx.text('MODIFICACION PERSONA', weight="bold", align='center')
+					rx.heading('NUEVA PERSONA', weight="bold", align='center'),
+					rx.heading('MODIFICACION PERSONA', weight="bold", align='center')
 				),
-			),
+			# ),
 			rx.form(
 				rx.table.root(
 					rx.table.header(
@@ -324,7 +324,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 						),
 					),
 					rx.table.body(
-						rx.input(value=persona[0],  type='text', name='id', style={'width':'0px', 'height':'0px'}),
+						rx.input(value=persona[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
 						rx.table.row(
 							rx.table.cell(
 								rx.hstack(
@@ -335,7 +335,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Orden: '),
-									rx.input(placeholder=persona[2], type='number', default_value=persona[2], name='orden', style={'width':'50px'}),
+									rx.input(type='number', default_value=persona[2], name='orden', style={'width':'50px'}),
 								)
 							),
 						),
@@ -343,13 +343,13 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('*Apellido: '),
-									rx.input(placeholder=persona[3], type='text', default_value=persona[3], name='apellido', required=True, style={'width':'200px'}),
+									rx.input(type='text', default_value=persona[3], name='apellido', required=True, style={'width':'200px'}),
 								),
 							),
 							rx.table.cell(
 								rx.hstack(
 									rx.text('*Nombre: '),
-									rx.input(placeholder=persona[4], type='text', default_value=persona[4], name='nombre', required=True, style={'width':'200px'}),
+									rx.input(type='text', default_value=persona[4], name='nombre', required=True, style={'width':'200px'}),
 								)
 							),
 						),
@@ -359,23 +359,23 @@ def fnc_persona_am(persona: list) -> rx.Component:
 									rx.text('Usuario: '),
 									rx.cond(
 										State.is_superuser != 1,
-										rx.input(placeholder=persona[5], type='text', default_value=persona[5], name='usuario', disabled=True, style={'width':'200px'}),
-										rx.input(placeholder=persona[5], type='text', default_value=persona[5], name='usuario', style={'width':'200px'}),
+										rx.input(type='text', default_value=persona[5], name='usuario', disabled=True, style={'width':'200px'}),
+										rx.input(type='text', default_value=persona[5], name='usuario', style={'width':'200px'}),
 									),
 								)
 							),
 							rx.table.cell(
 								rx.hstack(
-									rx.text('Grado: '),
-									rx.select(State.grados, default_value=persona[6], name='grado'),
+									rx.text('*Grado: '),
+									rx.select(State.grados, default_value=persona[6], name='grado', required=True),
 								),
 							)
 						),
 						rx.table.row(
 							rx.table.cell(
 								rx.hstack(
-									rx.text('Casa de Practica: '),
-									rx.select(State.casaspr, default_value=persona[7], name='casapractica'), 
+									rx.text('*Casa de Practica: '),
+									rx.select(State.casaspr, default_value=persona[7], name='casapractica', required=True), 
 								),
 							),
 							rx.table.cell(
@@ -393,13 +393,13 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Direccion: '),
-									rx.input(placeholder=persona[9], type='text', default_value=persona[9], name='direccion', style={'width':'200px'}),
+									rx.input(type='text', default_value=persona[9], name='direccion', style={'width':'200px'}),
 								)
 							),
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Localidad: '),
-									rx.input(placeholder=persona[10], type='text', default_value=persona[10], name='localidad', style={'width':'200px'}),
+									rx.input(type='text', default_value=persona[10], name='localidad', style={'width':'200px'}),
 								)
 							)
 						),
@@ -407,13 +407,13 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Codigo Postal: '),
-									rx.input(placeholder=persona[11], type='text', default_value=persona[11], name='codigo_postal', style={'width':'200px'}),
+									rx.input(type='text', default_value=persona[11], name='codigo_postal', style={'width':'200px'}),
 								)
 							),
 							rx.table.cell(
 								rx.hstack(
 									rx.text('e-mail: '),
-									rx.input(placeholder=persona[12], type='text', default_value=persona[12], name='email', style={'width':'200px'}),
+									rx.input(type='text', default_value=persona[12], name='email', style={'width':'200px'}),
 								)
 							)
 						),
@@ -421,40 +421,37 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Fecha de Nacimiento: '),
-									rx.input(placeholder=persona[13], type='date', default_value=persona[13], name='fechanacimiento', style={'width':'200px'}),
+									rx.input(type='date', default_value=persona[13], name='fechanacimiento', style={'width':'200px'}),
 								)
 							),
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Fecha de Ingreso: '),
-									rx.input(placeholder=persona[14], type='date', default_value=persona[14], name='fechaingreso', style={'width':'200px'}),
+									rx.input(type='date', default_value=persona[14], name='fechaingreso', style={'width':'200px'}),
 								)
 							)
 						),
 						rx.table.row(
 							rx.table.cell(
 								rx.hstack(
-									rx.text('Fecha de Egreso: ', persona[15]),
-									rx.cond(
-										persona[15],
-										rx.input(placeholder=persona[15], type='date', default_value=persona[15], name='fechaegreso', style={'width':'200px'}),
-										rx.input(placeholder=persona[15], type='date', name='fechaegreso', style={'width':'200px'}),
-									),
+									rx.text('Fecha de Egreso: '),
+									rx.input(type='text', default_value=persona[15], name='fechaegreso', style={'width':'200px'}),
 								),
-							)
+							),
+							rx.table.cell(),		# para completar el row()
 						),
 						rx.table.row(
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Celular: '),
-									rx.input(placeholder=persona[16], type='text', default_value=persona[16], name='celular', style={'width':'200px'}),
+									rx.input(type='text', default_value=persona[16], name='celular', style={'width':'200px'}),
 								)
 							),
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Documento: '),
 									rx.select(State.tipodocs, default_value=persona[17], name='tipodoc'), 
-									rx.input(placeholder=persona[18], type='text', default_value=persona[18], name='nrodoc', style={'width':'200px'}),
+									rx.input(type='text', default_value=persona[18], name='nrodoc', style={'width':'200px'}),
 								)
 							)
 						),
@@ -462,18 +459,16 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Clave: '),
-									rx.input(placeholder=persona[19], type='password', default_value=persona[19], name='clave', style={'width':'200px'}),
+									rx.input(type='password', default_value=persona[19], name='clave', style={'width':'200px'}),
 								)
 							),
 							rx.table.cell(
 								rx.vstack(
 									rx.hstack(
 										rx.checkbox(name='is_superuser', label='Superusuario? ', default_checked=persona[20]),
-										rx.text('SuperUsuario? '),
-									),
-									rx.hstack(
+										rx.text('SuperUsuario'),
 										rx.checkbox(name='is_staff', label='Staff? ', default_checked=persona[21]),
-										rx.text('Staff? '),
+										rx.text('Staff'),
 									),
 								)
 							)
@@ -486,7 +481,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 											rx.text('Foto'),
 											rx.image(src=persona[22], width='160px', high='auto'),
 										),
-										rx.input(type='file', name='foto'),
+										rx.input(type='file', name='foto', accept="image/png, image/jpeg"),
 										rx.hstack(
 											rx.checkbox(name='eliminar_foto', label='Eliminar'),
 											rx.text('Eliminar'),
@@ -501,7 +496,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 											rx.text('Certificado'),
 											rx.image(src=persona[23], width='150px', high='auto'),
 										),
-										rx.input(type='file', name='certificado'),
+										rx.input(type='file', name='certificado', accept="image/png, image/jpeg"),
 										rx.hstack(
 											rx.checkbox(name='eliminar_cert', label='Eliminar'),
 											rx.text('Eliminar'),
@@ -515,7 +510,6 @@ def fnc_persona_am(persona: list) -> rx.Component:
 				rx.button('Confirmar', type='submit', style={'width':'100%'}),
 				on_submit=State.handle_persona_am,
 				reset_on_submit=True,
-
 			)
 		),
 		width='100%',
