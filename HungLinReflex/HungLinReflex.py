@@ -24,6 +24,7 @@ class State(rx.State):
 	personas: list[tuple]
 	persona: tuple
 	tipoestados: list
+	tipoestatodos: list
 	tipoestado: str
 	grados: list
 	grado: str
@@ -83,6 +84,15 @@ class State(rx.State):
 		if (self.error != ''):
 			await self.handle_notify()
 
+	@rx.event(background=True)
+	async def handle_personas(self, form_data: dict):
+		async with self:
+			form_persona = form_data
+			self.personas = db_get_personas(form_data['busq'], form_data['estado'])
+			self.opc = 'per'
+		if (self.error != ''):
+			await self.handle_notify()
+
 	@rx.event()
 	def evt_tipoestado(self, value: str):
 		self.tipoestado = value
@@ -127,7 +137,8 @@ class State(rx.State):
 	@rx.event(background=True)
 	async def evt_personas(self):
 		async with self:
-			self.personas = db_get_personas()
+			self.personas = db_get_personas(busq='', estado='Todos')
+			self.tipoestatodos = db_get_tipoestados('T')
 			self.opc = "per"
 
 	@rx.event(background=True)
@@ -161,37 +172,40 @@ class State(rx.State):
 #################
 def index() -> rx.Component:
 	return rx.container(
-		rx.vstack(
-			rx.hstack(
-				rx.image(src='/bosquetaoista/bosquetaoista.jpg'),
+		rx.container(
+			rx.vstack(
+				rx.hstack(
+					rx.image(src='/bosquetaoista/bosquetaoista.jpg'),
+					rx.cond(
+						State.nombre == '',
+						fnc_ingresar(),
+						fnc_adentro(),
+					)
+				),
 				rx.cond(
-					State.nombre == '',
-					fnc_ingresar(),
-					fnc_adentro(),
-				)
+					State.nombre != '',
+					fnc_menu(),
+				),
+				rx.match(
+					State.opc,
+					('img', fnc_imagen()),
+					('cas', fnc_casas()),
+					('cam', fnc_casa_am(State.casa)),
+					('cad', fnc_casa_alumnos(State.alumnos)),
+					('per', fnc_personas(State.personas)),
+					('pam', fnc_persona_am(State.persona)),
+				),
+				spacing="5",
+				justify_x="center",
+				min_height="85vh",
 			),
 			rx.cond(
-				State.nombre != '',
-				fnc_menu(),
+				State.error != '',
+				notify_component(State.error, 'shield_alert', 'yellow'),
 			),
-			rx.match(
-				State.opc,
-				('img', fnc_imagen()),
-				('cas', fnc_casas()),
-				('cam', fnc_casa_am(State.casa)),
-				('cad', fnc_casa_alumnos(State.alumnos)),
-				('per', fnc_personas(State.personas)),
-				('pam', fnc_persona_am(State.persona)),
-			),
-			spacing="5",
-			justify_x="center",
-			min_height="85vh",
+			style={'background_color':'#ffffff'},
 		),
-		rx.cond(
-			State.error != '',
-			notify_component(State.error, 'shield_alert', 'yellow'),
-		),
-		# style={'background_color':'#801316'},
+		style={'background_color':'#801316'},
 	)
 
 #################
@@ -308,13 +322,11 @@ def fnc_casa_alumnos(alumnos) -> rx.Component:
 def fnc_persona_am(persona: list) -> rx.Component:
 	return rx.box(
 		rx.card(
-			# rx.card(
-				rx.cond(
-					persona[0] == 0,
-					rx.heading('NUEVA PERSONA', weight="bold", align='center'),
-					rx.heading('MODIFICACION PERSONA', weight="bold", align='center')
-				),
-			# ),
+			rx.cond(
+				persona[0] == 0,
+				rx.heading('NUEVA PERSONA', weight="bold", align='center'),
+				rx.heading('MODIFICACION PERSONA', weight="bold", align='center')
+			),
 			rx.form(
 				rx.table.root(
 					rx.table.header(
@@ -326,10 +338,11 @@ def fnc_persona_am(persona: list) -> rx.Component:
 					rx.table.body(
 						rx.input(value=persona[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
 						rx.table.row(
+
 							rx.table.cell(
 								rx.hstack(
 									rx.text('*Estado: '),
-									rx.select(State.tipoestados, default_value=persona[1], name='estado'),
+									rx.select(State.tipoestados, default_value=persona[1], value=persona[1], name='estado'),
 								),
 							),
 							rx.table.cell(
@@ -483,7 +496,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 											# rx.checkbox(name='eliminar_foto', label='Eliminar'),
 											# rx.text('Eliminar'),
 										),
-										rx.input(type='file', name='foto', accept="image/png, image/jpeg"),
+										rx.input(type='file', name='foto', accept='image/*'),
 									),
 								),
 							),
@@ -496,7 +509,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 											# rx.checkbox(name='eliminar_cert', label='Eliminar', justify_y='50px'),
 											# rx.text('Eliminar'),
 										),
-										rx.input(type='file', name='certificado', accept="image/png, image/jpeg"),
+										rx.input(type='file', name='certificado', accept='image/*'),
 									),
 								),
 							),
@@ -504,7 +517,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 					)
 				),
 				rx.button('Confirmar', type='submit', style={'width':'100%'}),
-				on_submit=State.handle_persona_am,
+				on_submit=State.handle_persona_am('0'),
 				reset_on_submit=True,
 			)
 		),
@@ -514,16 +527,12 @@ def fnc_persona_am(persona: list) -> rx.Component:
 
 def fnc_persona(persona: list) -> rx.Component:
 	return rx.table.row(
-		rx.table.cell(persona[1]),
-		rx.table.cell(persona[2]),
-		rx.table.cell(
-			rx.hstack(
-				rx.image(persona[3], width='20%', high='auto'), 
-				persona[4]
-			),
-		),
-		rx.table.cell(persona[5]),
-		rx.table.cell(persona[6]),
+		rx.table.cell(persona[1], vertical_align="middle"),
+		rx.table.cell(persona[2], vertical_align="middle"),
+		rx.table.cell(rx.image(persona[3], width='100%', high='auto')), 
+		rx.table.cell(persona[4], vertical_align="middle"),
+		rx.table.cell(persona[5], vertical_align="middle"),
+		rx.table.cell(persona[6], vertical_align="middle"),
 		rx.table.cell(
 			rx.vstack(
 				rx.hstack(
@@ -540,19 +549,28 @@ def fnc_persona(persona: list) -> rx.Component:
 
 def fnc_personas(personas) -> rx.Component:
 	return rx.card(
-		rx.text(
-			rx.button(rx.icon('plus'), 'PERSONA'), 
-			align='right', 
-			on_click=State.evt_persona_am(0)
+		rx.card(
+			rx.form(
+				rx.hstack(
+					rx.input(placeholder='Buscar...', type='text', name='busq'),
+					rx.select(State.tipoestatodos, name='estado', default_value='Activo'),
+					rx.button(rx.icon('search'), 'Buscar', type='submit'),
+					rx.button(rx.icon('plus'), 'PERSONA', align='right', on_click=State.evt_persona_am(0)),
+				),
+				on_submit=State.handle_personas,
+				reset_on_submit=True,
+			),
 		),
+
 		rx.table.root(
 			rx.table.row(
-				rx.table.column_header_cell('Orden'),
-				rx.table.column_header_cell('Estado'),
-				rx.table.column_header_cell('Apellido y Nombre'),
-				rx.table.column_header_cell('Grado'),
-				rx.table.column_header_cell('Casa de Practica'),
-				rx.table.column_header_cell('Acciones'),
+				rx.table.column_header_cell('Orden', width='5%'),
+				rx.table.column_header_cell('Estado', width='10%'),
+				rx.table.column_header_cell('Foto', width='10%'),
+				rx.table.column_header_cell('Apellido y Nombre', width='25%'),
+				rx.table.column_header_cell('Grado', width='10%'),
+				rx.table.column_header_cell('Casa de Practica', width='10%'),
+				rx.table.column_header_cell('Acciones', width='10%'),
 			),
 			rx.table.body(
 				rx.foreach(personas, fnc_persona),

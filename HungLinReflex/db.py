@@ -88,225 +88,173 @@ def db_get_alumnos(id: int):
 
 # personas
 def db_get_persona(id):
-	q1 = f'SELECT A.id, B.nombre as estado, A.orden, A.apellido, A.nombre, A.usuario, C.nombre as grado,  D.nombre as casa_practica, E.nombre as responsable_casa, A.direccion, A.localidad, A.codigo_postal, A.email, A.fechanacimiento, A.fechaingreso, A.fechaegreso, A.celular, F.nombre as tipodoc, A.nrodoc, A.clave, A.is_superuser, A.is_staff, CASE WHEN A.foto is NULL THEN "/bosquetaoista/nophoto.jpg" ELSE CONCAT("/", foto) END as foto, CASE WHEN A.certificado is NULL THEN "/bosquetaoista/nocert.png" ELSE CONCAT("/", certificado) END as certificado FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id INNER JOIN bosquetaoista_casa D on D.id = A.casa_practica_id LEFT JOIN bosquetaoista_casa E on E.id = A.responsable_casa_id LEFT JOIN bosquetaoista_tipodoc F on F.id = A.tipodoc_id WHERE A.id = {id}'
+	q1 = f'SELECT A.id, B.nombre as estado, A.orden, A.apellido, A.nombre, A.usuario, C.nombre as grado,  D.nombre as casa_practica, E.nombre as responsable_casa, A.direccion, A.localidad, A.codigo_postal, A.email, A.fechanacimiento, A.fechaingreso, A.fechaegreso, A.celular, F.nombre as tipodoc, A.nrodoc, A.clave, A.is_superuser, A.is_staff, CASE WHEN A.foto is NULL OR A.foto = "" THEN "/bosquetaoista/nophoto.jpg" ELSE foto END as foto, CASE WHEN A.certificado is NULL or A.certificado = "" THEN "/bosquetaoista/nocert.png" ELSE certificado END as certificado FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id INNER JOIN bosquetaoista_casa D on D.id = A.casa_practica_id LEFT JOIN bosquetaoista_casa E on E.id = A.responsable_casa_id LEFT JOIN bosquetaoista_tipodoc F on F.id = A.tipodoc_id WHERE A.id = {id}'
 	cursor.execute(q1)
 	persona = cursor.fetchone()
 	return(persona)
 
-def db_get_personas():
-	q1 = 'SELECT A.id, A.orden, B.nombre as estado, CASE WHEN A.foto is NULL THEN "/bosquetaoista/nophoto.jpg" ELSE CONCAT("/", foto) END as foto, CONCAT(A.apellido, ", ", A.nombre), C.nombre as grado, D.nombre as casapractica FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id INNER JOIN bosquetaoista_casa D on D.id = A.casa_practica_id WHERE A.estado_id = 1 ORDER BY A.orden'
+def db_get_personas(busq: str='', estado:str ='Todos'):
+	q1 = 'SELECT A.id, A.orden, B.nombre as estado, CASE WHEN A.foto is NULL OR A.foto = "" THEN "/bosquetaoista/nophoto.jpg" ELSE foto END as foto, CONCAT(A.apellido, ", ", A.nombre), C.nombre as grado, D.nombre as casapractica FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id INNER JOIN bosquetaoista_casa D on D.id = A.casa_practica_id WHERE '
+	if (len(busq)):
+		q1 += f' A.nombre LIKE "%{busq}%" OR A.apellido LIKE "%{busq}%" AND '
+	if (estado != 'Todos'):
+		q2 = f'SELECT * FROM bosquetaoista_tipoestado WHERE nombre = "{estado}"'
+		cursor.execute(q2)
+		estado_id = cursor.fetchone()[0]
+		q1 += f' A.estado_id = {estado_id} AND'
+	q1 += ' 1 = 1 ORDER BY A.orden'
 	cursor.execute(q1)
 	personas = cursor.fetchall()
 	return(personas)
 
 def db_put_persona(pers):
+
 	is_superuser = False
 	is_staff = False
 
-	print(pers)
-
 	id = pers['id']
 
-	qins = f'INSERT INTO bosquetaoista_persona (id '
+	qins = f'INSERT INTO bosquetaoista_persona (id'
 	valores = '(0 '
-	qupd = f'UPDATE bosquetaoista_persona SET '
+	qupd = f'UPDATE bosquetaoista_persona SET id = {id}'
 
+	for key, value in pers.items():
+		match key:
+			case 'estado':
+				q1 = f'SELECT * FROM bosquetaoista_tipoestado WHERE nombre = "{value}"'
+				cursor.execute(q1)
+				estado = cursor.fetchone()[0]
+				qins += f', estado_id'
+				valores += f', {estado}'
+				qupd += f', estado_id = {estado}'
 
-	if (int(id) == 0):
-		q1 = f'INSERT INTO bosquetaoista_persona (id '
-		valores = '(0 '
-		for key, value in pers.items():
-			match key:
-				case 'id':
-					q2 = f'SELECT MAX(orden) from bosquetaoista_persona'
-					cursor.execute(q2)
+			case 'orden':
+				orden = pers['orden']
+				if (len(orden) == 0):
+					q1 = f'SELECT MAX(orden) from bosquetaoista_persona'
+					cursor.execute(q1)
 					orden = cursor.fetchone()[0]
-					q1 += f', orden '
-					valores += f', {orden}'
+				qins += f', orden '
+				valores += f', {orden}'
+				qupd += f', orden = {orden}'
 
-				case 'estado':
-					q2 = f'SELECT * FROM bosquetaoista_tipoestado WHERE nombre = "{value}"'
-					cursor.execute(q2)
-					estado = cursor.fetchone()[0]
-					q1 += f', estado_id '
-					valores += f', {estado}'
+			case 'grado':
+				q1 = f'SELECT * FROM bosquetaoista_grado WHERE nombre = "{value}"'
+				cursor.execute(q1)
+				grado = cursor.fetchone()[0]
+				qins += f', grado_id'
+				valores += f', {grado}'
+				qupd += f', grado_id = {grado}'
 
-				case 'grado':
-					q2 = f'SELECT * FROM bosquetaoista_grado WHERE nombre = "{value}"'
-					cursor.execute(q2)
-					grado = cursor.fetchone()[0]
-					q1 += f', grado_id'
-					valores += f', {grado}'
-					
-				case 'casapractica':
-					q2 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
-					cursor.execute(q2)
-					casa = cursor.fetchone()[0]
-					q1 += f', casa_practica_id'
-					valores += f', {casa}'
-					
-				case 'responsablecasa':
-					if (value != ''):
-						q2 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
-						cursor.execute(q2)
-						responsablecasa = cursor.fetchone()[0]
-						q1 += f', responsable_casa_id'
-						valores += f', {responsablecasa}'
+			case 'casapractica':
+				q1 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
+				cursor.execute(q1)
+				casa = cursor.fetchone()[0]
+				qins += f', casa_practica_id'
+				valores += f', {casa}'
+				qupd += f', casa_practica_id = {casa}'
 
-				case 'fechanacimiento':
-					if (len(pers['fechanacimiento']) > 0):
-						q1 += f', fechanacimiento'
-						valores +' f, \"{fechanacimiento}\"'
+			case 'responsablecasa':
+				if (value != ''):
+					q1 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
+					cursor.execute(q1)
+					responsablecasa = cursor.fetchone()[0]
+					qins += f', responsable_casa_id'
+					valores += f', {responsablecasa}'
+					qupd += f', responsable_casa_id = {responsablecasa}'
 
-				case 'fechaingreso':
-					if (len(pers['fechaingreso']) > 0):
-						q1 += f', ingreso'
-						valores +' f, \"{fechaingreso}\"'
+			case 'fechanacimiento':
+				fnac = pers['fechanacimiento']
+				if (len(fnac) > 0):
+					qins += f', fechanacimiento'
+					valores += f', \"{fnac}\"'
+					qupd += f', fechanacimiento = \"{fnac}\"'
 
-				case 'fechaegreso':
-					if (len(pers['fechaegreso']) > 0):
-						q1 += f', ingreso'
-						valores +' f, \"{fechaegreso}\"'
+			case 'fechaingreso':
+				fing = pers['fechaingreso']
+				if (len(fing) > 0):
+					qins += f', fechaingreso'
+					valores += f', \"{fing}\"'
+					qupd += f', fechaingreso = \"{fing}\"'
 
-				case 'tipodoc':
-					q2 = f'SELECT * FROM bosquetaoista_tipodoc WHERE nombre = "{value}"'
-					cursor.execute(q2)
-					tipodoc = cursor.fetchone()[0]
-					q1 += f', tipodoc_id'
-					valores += f', {tipodoc}'
+			case 'fechaegreso':
+				fegr = pers['fechaegreso']
+				if (len(fegr) > 0):
+					qins += f', fechaegreso'
+					valores +=' f, \"{fegr}\"'
+					qupd += f', fechaegreso = \"{fegr}\"'
 
-				case 'is_superuser':
-					is_superuser = True
+			case 'tipodoc':
+				q1 = f'SELECT * FROM bosquetaoista_tipodoc WHERE nombre = "{value}"'
+				cursor.execute(q1)
+				tipodoc = cursor.fetchone()[0]
+				qins += f', tipodoc_id'
+				valores += f', {tipodoc}'
+				qupd += f', tipodoc_id = {tipodoc}'
 
-				case 'is_staff':
-					is_staff = True
+			case 'clave':
+				## falta codificar
+				if (len(pers['clave']) > 0):
+					clavecod = pers['clave']
+					qins += f', clave'
+					valores += f', \"{clavecod}\"'
+					qupd += f', clave = \"{clavecod}\"'
 
-				case 'foto':
-					if (len(pers['foto']) > 0):
-						foto = 'images/' + str(uuid.uuid4()) + '.jpg'
-						with open('./assets/' + foto, 'wb') as f:
-							f.write(pers['foto'])
-						q1 += f', foto = "{foto}"'
+			case 'is_superuser':
+				is_superuser = True
 
-				case 'certificado':
-					if (len(pers['certificado']) > 0):
-						cert = 'certificados/' + str(uuid.uuid4()) + '.jpg'
-						with open('./assets/' + cert, 'wb') as f:
-							f.write(pers['certificado'])
-						q1 += f', certificado = "{cert}"'
+			case 'is_staff':
+				is_staff = True
 
-				case _:
-					if (key not in ['id', 'orden', 'fechanacimiento', 'fechaingreso', 'fechaegreso']):
-						q1 += f', {key}'
-						valores += f', TRIM(\"{value}\")'
-		q1 += f', is_superuser'
-		if (is_superuser):
-			valores += ', 1'
-		else:
-			valores += ', 0'
-		q1 += f', is_staff'
-		if (is_staff):
-			valores += ', 1'
-		else:
-			valores += ', 0'
-		q1 += f') VALUES '
-		valores += ')'
-		q1 += valores
-
-	else:
-		q1 = f'UPDATE bosquetaoista_persona SET '
-		for key, value in pers.items():
-			match key:
-				case 'id':
-					q1 += f'id={id}'
-
-				case 'estado':
-					q2 = f'SELECT * FROM bosquetaoista_tipoestado WHERE nombre = "{value}"'
-					cursor.execute(q2)
-					estado = cursor.fetchone()[0]
-					q1 += f', estado_id = {estado}'
-
-				case 'grado':
-					q2 = f'SELECT * FROM bosquetaoista_grado WHERE nombre = "{value}"'
-					cursor.execute(q2)
-					grado = cursor.fetchone()[0]
-					q1 += f', grado_id = {grado}'
-					
-				case 'casapractica':
-					q2 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
-					cursor.execute(q2)
-					casa = cursor.fetchone()[0]
-					q1 += f', casa_practica_id = {casa}'
-					
-				case 'responsablecasa':
-					if (value != ''):
-						q2 = f'SELECT * FROM bosquetaoista_casa WHERE nombre = "{value}"'
-						cursor.execute(q2)
-						responsablecasa = cursor.fetchone()[0]
-						q1 += f', responsable_casa_id = {responsablecasa}'
-					
-				case 'tipodoc':
-					q2 = f'SELECT * FROM bosquetaoista_tipodoc WHERE nombre = "{value}"'
-					cursor.execute(q2)
-					tipodoc = cursor.fetchone()[0]
-					q1 += f', tipodoc_id = {tipodoc}'
-				
-				case 'fechanacimiento':
-					if (pers['fechanacimiento'] != ''):
-						q1 += f', fechanacimiento = \"{pers['fechanacimiento']}\"'
-
-				case 'fechaingreso':
-					if (pers['fechaingreso'] != ''):
-						q1 += f', fechaingreso = \"{pers['fechaingreso']}\"'
-
-				case 'fechaegreso':
-					if (pers['fechaegreso'] != ''):
-						q1 += f', fechaegreso = \"{pers['fechaegreso']}\"'
-
-				case 'is_superuser':
-					is_superuser = True
-
-				case 'is_staff':
-					is_staff = True
-
-				case 'foto':
+			case 'foto':
+				if (len(pers['foto']) > 0):
 					foto = 'images/' + str(uuid.uuid4()) + '.jpg'
 					with open('./assets/' + foto, 'wb') as f:
 						f.write(pers['foto'])
-					q1 += f', foto = "{foto}"'
+					qins += f', foto'
+					valores += f', "{foto}"'
+					qupd += f', foto = "{foto}"'
 
-				case 'certificado':
+			case 'certificado':
+				if (len(pers['certificado']) > 0):
 					cert = 'certificados/' + str(uuid.uuid4()) + '.jpg'
 					with open('./assets/' + cert, 'wb') as f:
 						f.write(pers['certificado'])
-					q1 += f', certificado = "{cert}"'
+					qins += f', certificado'
+					valores += f', "{cert}"'
+					qupd += f', certificado = "{cert}"'
 
-				case _:
-					if (key not in ['id']):
-						q1 += f', {key} = TRIM(\"{value}\")'
-		
-		q1 += f', is_superuser = '
-		if (is_superuser):
-			q1 += '1'
-		else:
-			q1 += '0'
-		q1 += f', is_staff = '
-		if (is_staff):
-			q1 += '1'
-		else:
-			q1 += '0'
-		q1 += f' WHERE id = {id}'
+			case _:
+				if (key in ['apellido', 'nombre', 'usuario', 'direccion', 'localidad', 'codigopostal', 'email', 'celular', 'nrodoc']):
+					qins += f', {key}'
+					valores += f', TRIM(\"{value}\")'
+					qupd += f', {key} = TRIM(\"{value}\")'
 
-	print('q1 ', q1)
-	cursor.execute(q1)
+
+	qins += f', is_superuser'
+	valores += ', 1' if is_superuser else ', 0'
+	qins += f', is_staff'
+	valores += f', 1' if is_staff else ', 0'
+	qins += f') VALUES {valores} )'
+
+	qupd += f', is_superuser = 1' if is_superuser else f', is_superuser = 0'
+	qupd += f', is_staff = 1' if is_staff else f', is_staff = 0'
+	qupd += f' WHERE id = {id}'
+
+	if (int(id) == 0):
+		cursor.execute(qins)
+	else:
+		cursor.execute(qupd)
 	conn.commit()
 	return
 
 
-def db_get_tipoestados():
+def db_get_tipoestados(todos: str=''):
 	q1 = 'SELECT nombre FROM bosquetaoista_tipoestado ORDER BY id'
 	cursor.execute(q1)
-	tipoestados = [tipoestado[0] for tipoestado in cursor.fetchall()]
+	tipoestados = [tp[0] for tp in cursor.fetchall()]
+	if (len(todos) > 0):
+		tipoestados.insert(0, 'Todos')
 	return(tipoestados)
 
 def db_get_grados():
