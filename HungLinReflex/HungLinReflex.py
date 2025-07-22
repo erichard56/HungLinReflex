@@ -3,7 +3,7 @@ import asyncio
 
 from .db import db_get_usuario, db_get_casas_full, db_get_casa, db_put_casa, db_get_frase, db_get_alumnos
 from .db import db_get_personas, db_get_persona, db_get_tipoestados, db_get_grados, db_get_casas, db_get_tipodocs
-from .db import db_put_persona
+from .db import db_put_persona, db_get_persona_caps, db_get_persona_extras
 from .notify import notify_component
 
 from rxconfig import config
@@ -32,9 +32,8 @@ class State(rx.State):
 	tipodocs: list
 	tipodoc: str
 	casa1: str
-	uploaded_files: list[str] = []
-	foto: rx.UploadFile
-	cert: rx.UploadFile
+	caps: list[tuple]
+	extras: list[tuple]
 
 
 # handle's
@@ -126,15 +125,6 @@ class State(rx.State):
 
 # eventos persona
 	@rx.event(background=True)
-	async def evt_persona_am(self, id):
-		async with self:
-			if (id != 0):
-				self.persona = db_get_persona(id)
-			else:
-				self.persona = (0, '', '')
-			self.opc = "pam"
-
-	@rx.event(background=True)
 	async def evt_personas(self):
 		async with self:
 			self.personas = db_get_personas(busq='', estado='Todos')
@@ -148,16 +138,26 @@ class State(rx.State):
 			self.grados = db_get_grados()
 			self.casaspr = db_get_casas()
 			self.tipodocs = db_get_tipodocs()
-			if (id != 0):
-				self.persona = db_get_persona(id)
+			if (int(id) != 0):
+				self.persona = db_get_persona(int(id))
 				self.tipoestado = self.persona[1]
 				self.grado = self.persona[6]
 				self.casa1 = self.persona[7]
 				self.tipodoc = self.persona[17]
 			else:
-				self.persona = (0, '', '')
+				self.persona = db_get_persona(0)
+				self.tipoestado = 'Activo'
+				self.grado = 'Alumno'
+				self.tipodoc = 'DNI'
 			self.opc = "pam"
 
+	@rx.event(background=True)
+	async def evt_persona_detalle(self, id):
+		async with self:
+			self.persona = db_get_persona(id)
+			self.caps = db_get_persona_caps(id)
+			self.extras = db_get_persona_extras(id)
+			self.opc = 'pde'
 
 # eventos varios
 	@rx.event(background=True)
@@ -194,6 +194,7 @@ def index() -> rx.Component:
 					('cad', fnc_casa_alumnos(State.alumnos)),
 					('per', fnc_personas(State.personas)),
 					('pam', fnc_persona_am(State.persona)),
+					('pde', fnc_persona_detalle(State.persona, State.caps, State.extras)),
 				),
 				spacing="5",
 				justify_x="center",
@@ -264,7 +265,7 @@ def fnc_casa_am(casa) -> rx.Component:
 			rx.form(
 				rx.vstack(
 					rx.box(
-						rx.input(value=casa[0],  type='text', name='id', style={'width':'0px', 'height':'0px'}),
+						rx.input(value=casa[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
 					),
 					rx.input(type='text', default_value=casa[1], name='nombre', style={'width':'200px'}),
 					rx.input(type='text', default_value=casa[2], name='direccion', style={'width':'200px'}),
@@ -338,7 +339,6 @@ def fnc_persona_am(persona: list) -> rx.Component:
 					rx.table.body(
 						rx.input(value=persona[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
 						rx.table.row(
-
 							rx.table.cell(
 								rx.hstack(
 									rx.text('*Estado: '),
@@ -517,7 +517,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 					)
 				),
 				rx.button('Confirmar', type='submit', style={'width':'100%'}),
-				on_submit=State.handle_persona_am('0'),
+				on_submit=State.handle_persona_am,
 				reset_on_submit=True,
 			)
 		),
@@ -534,31 +534,28 @@ def fnc_persona(persona: list) -> rx.Component:
 		rx.table.cell(persona[5], vertical_align="middle"),
 		rx.table.cell(persona[6], vertical_align="middle"),
 		rx.table.cell(
-			rx.vstack(
-				rx.hstack(
-					rx.button(rx.icon('pencil'), on_click=State.evt_persona_am(persona[0])),
-					rx.button(rx.icon('users')), #, on_click=State.evt_persona_detalle(persona[0])),
-				),
-				rx.hstack(
-					rx.button(rx.icon('users')), #, on_click=State.evt_persona_detalle(persona[0])),
-					rx.button(rx.icon('users')), #, on_click=State.evt_persona_detalle(persona[0])),
-				)
-			)
-		)
+			rx.hstack(
+				rx.button(rx.icon('pencil'), on_click=State.evt_persona_am(persona[0])),
+				rx.button(rx.icon('notebook-text'), on_click=State.evt_persona_detalle(persona[0])),
+				rx.button(rx.icon('info'), on_click=State.evt_persona_detalle(persona[0])),
+			),
+		),
 	)
 
 def fnc_personas(personas) -> rx.Component:
 	return rx.card(
 		rx.card(
-			rx.form(
-				rx.hstack(
-					rx.input(placeholder='Buscar...', type='text', name='busq'),
-					rx.select(State.tipoestatodos, name='estado', default_value='Activo'),
-					rx.button(rx.icon('search'), 'Buscar', type='submit'),
-					rx.button(rx.icon('plus'), 'PERSONA', align='right', on_click=State.evt_persona_am(0)),
+			rx.hstack(
+				rx.form(
+					rx.hstack(
+						rx.input(placeholder='Buscar...', type='text', name='busq'),
+						rx.select(State.tipoestatodos, name='estado', default_value='Activo'),
+						rx.button(rx.icon('search'), 'Buscar', type='submit'),
+					),
+					on_submit=State.handle_personas,
+					reset_on_submit=True,
 				),
-				on_submit=State.handle_personas,
-				reset_on_submit=True,
+				rx.button(rx.icon('plus'), 'PERSONA', align='right', on_click=State.evt_persona_am(0)),
 			),
 		),
 
@@ -577,6 +574,177 @@ def fnc_personas(personas) -> rx.Component:
 			),
 		),
 	)
+
+def fnc_persona_detalle_cap(cap) -> rx.Component:
+	return rx.table.row(
+		rx.table.cell(cap[0]),
+		rx.table.cell(cap[1]),
+		rx.table.cell(cap[2]),
+		rx.table.cell(cap[3]),
+		rx.table.cell(cap[4]),
+	)
+
+def fnc_persona_detalle_extra(extra) -> rx.Component:
+	return rx.table.row(
+		rx.table.cell(extra[0]),
+		rx.table.cell(extra[1]),
+	)
+
+def fnc_persona_detalle(persona: list, caps: list, extras: list) -> rx.Component:
+	return rx.box(
+		rx.card(
+			rx.card(
+				rx.heading(persona[3], ', ', persona[4], weight="bold", align='center'),
+			),
+			rx.table.root(
+				rx.table.header(
+					rx.table.row(
+						rx.table.column_header_cell('Imagen', width='40%', height='0vw'),
+						rx.table.column_header_cell('Datos', width='60%', height='0vw'),
+					),
+				),
+				rx.table.body(
+					rx.table.row(
+						rx.table.cell(
+							rx.vstack(
+								rx.image(src=persona[22], width='100%', high='auto'),
+								rx.image(src=persona[23], width='100%', high='auto'),
+							)
+						),
+						rx.table.root(
+							rx.table.header(
+								rx.table.row(
+									rx.table.column_header_cell(width='50%', height='0vw'),
+									rx.table.column_header_cell(width='50%', height='0vw'),
+								),
+							),
+							rx.table.body(
+								rx.table.row(
+									rx.table.cell('Orden'),
+									rx.table.cell(persona[2])
+								),
+								rx.table.row(
+									rx.table.cell('Estado'),
+									rx.table.cell(persona[1]),
+								),
+								rx.table.row(
+									rx.table.cell('Grado: '),
+									rx.table.cell(persona[6]),
+								),
+								rx.table.row(
+									rx.table.cell('Casa de Práctica'),
+									rx.table.cell(persona[7]),
+								),
+								rx.cond(
+									persona[8],
+									rx.table.row(
+										rx.table.cell('Responsable Casa'),
+										rx.table.cell(persona[8]),
+									),
+								),
+								rx.table.row(
+									rx.table.cell('Dirección'),
+									rx.table.cell(persona[9]),
+								),
+								rx.table.row(
+									rx.table.cell('Localidad'),
+									rx.table.cell(persona[10]),
+								),
+								rx.table.row(
+									rx.table.cell('Código Postal'),
+									rx.table.cell(persona[11]),
+								),
+								rx.table.row(
+									rx.table.cell('Email'),
+									rx.table.cell(persona[12]),
+								),
+								rx.table.row(
+									rx.table.cell('Fecha de Nacimiento'),
+									rx.table.cell(persona[13]),
+								),
+								rx.table.row(
+									rx.table.cell('Fecha de Ingreso'),
+									rx.table.cell(persona[14]),
+								),
+								rx.cond(
+									persona[15],
+									rx.table.row(
+										rx.table.cell('Fecha de Egreso'),
+										rx.table.cell(persona[15]),
+									),
+								),
+								rx.table.row(
+									rx.table.cell('Celular'),
+									rx.table.cell(persona[16]),
+								),
+								rx.table.row(
+									rx.table.cell('Documento'),
+									rx.table.cell(persona[17], ' ', persona[18]),
+								),
+								rx.cond(
+									persona[5],
+									rx.table.row(
+										rx.table.cell('Usuario'),
+										rx.table.cell(
+											persona[5],
+											rx.cond(
+												persona[20] == 1,
+												' *Superuser* ',
+												''
+											),
+											rx.cond(
+												persona[21] == 1,
+												' *Staff*',
+												''
+											)
+										),
+									),
+								),
+							),
+						),
+					)
+				),
+			)
+		),
+		rx.card(
+			rx.card(
+				rx.heading('CURSOS / ACTIVIDADES / PRACTICAS', weight="bold", align='center'),
+			),
+			rx.table.root(
+				rx.table.header(
+					rx.table.row(
+						rx.table.column_header_cell('Tipo', width='10%', height='0vw'),
+						rx.table.column_header_cell('Nombre', width='25%', height='0vw'),
+						rx.table.column_header_cell('Fecha', width='15%', height='0vw'),
+						rx.table.column_header_cell('Orador', width='30%', height='0vw'),
+						rx.table.column_header_cell('Estado', width='10%', height='0vw'),
+					),
+				),
+				rx.table.body(
+					rx.foreach(caps, fnc_persona_detalle_cap)
+				),
+			),
+		),
+		rx.card(
+			rx.card(
+				rx.heading('INFORMACION EXTRA', weight="bold", align='center'),
+			),
+			rx.table.root(
+				rx.table.header(
+					rx.table.row(
+						rx.table.column_header_cell('Tipo', width='30%', height='0vw'),
+						rx.table.column_header_cell('Comentario', width='70%', height='0vw'),
+					),
+				),
+				rx.table.body(
+					rx.foreach(extras, fnc_persona_detalle_extra)
+				),
+			),
+		),
+		width='100%',
+		margin_y='1vw',
+	)
+
 
 #################
 def fnc_imagen() -> rx.Component:
