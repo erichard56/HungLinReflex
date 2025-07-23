@@ -3,7 +3,9 @@ import asyncio
 
 from .db import db_get_usuario, db_get_casas_full, db_get_casa, db_put_casa, db_get_frase, db_get_alumnos
 from .db import db_get_personas, db_get_persona, db_get_tipoestados, db_get_grados, db_get_casas, db_get_tipodocs
-from .db import db_put_persona, db_get_persona_caps, db_get_persona_extras
+from .db import db_get_tipoextras, db_get_persona_detalle_extra, db_put_persona_detalle_extra
+from .db import db_persona_detalle_extra_delete
+from .db import db_put_persona, db_get_persona_caps, db_get_persona_extras, db_get_tipoextras
 from .notify import notify_component
 
 from rxconfig import config
@@ -34,6 +36,11 @@ class State(rx.State):
 	casa1: str
 	caps: list[tuple]
 	extras: list[tuple]
+	tipoextras: list
+	extra: tuple
+	persona_id: int
+	extra_id: int
+	extrax: tuple
 
 
 # handle's
@@ -89,6 +96,18 @@ class State(rx.State):
 			form_persona = form_data
 			self.personas = db_get_personas(form_data['busq'], form_data['estado'])
 			self.opc = 'per'
+		if (self.error != ''):
+			await self.handle_notify()
+
+	@rx.event(background=True)
+	async def handle_persona_detalle_extra_am(self, form_data: dict):
+		async with self:
+			db_put_persona_detalle_extra(form_data)
+			self.persona = db_get_persona(form_data['persona_id'])
+			self.caps = db_get_persona_caps(form_data['persona_id'])
+			self.extras = db_get_persona_extras(form_data['persona_id'])
+			self.tipoextras = db_get_tipoextras()
+			self.opc = 'pde'
 		if (self.error != ''):
 			await self.handle_notify()
 
@@ -152,12 +171,36 @@ class State(rx.State):
 			self.opc = "pam"
 
 	@rx.event(background=True)
+	async def evt_persona_detalle_extra_delete(self, persona_id, extra_id):
+		async with self:
+			db_persona_detalle_extra_delete(persona_id, extra_id)
+			self.persona = db_get_persona(persona_id)
+			self.caps = db_get_persona_caps(persona_id)
+			self.extras = db_get_persona_extras(persona_id)
+			self.tipoextras = db_get_tipoextras()
+			self.opc = 'pde'
+
+
+	@rx.event(background=True)
 	async def evt_persona_detalle(self, id):
 		async with self:
 			self.persona = db_get_persona(id)
 			self.caps = db_get_persona_caps(id)
 			self.extras = db_get_persona_extras(id)
+			self.tipoextras = db_get_tipoextras()
 			self.opc = 'pde'
+
+	@rx.event(background=True)
+	async def evt_persona_detalle_extras_am(self, ids: list):
+		async with self:
+			self.persona_id, self.extra_id = ids
+			if (self.extra_id > 0):
+				self.extrax = db_get_persona_detalle_extra(self.extra_id)
+				self.opc = 'pde'
+			else:
+				self.extrax = ()
+			self.opc = 'pdxam'
+
 
 # eventos varios
 	@rx.event(background=True)
@@ -176,10 +219,12 @@ def index() -> rx.Component:
 			rx.vstack(
 				rx.hstack(
 					rx.image(src='/bosquetaoista/bosquetaoista.jpg'),
-					rx.cond(
-						State.nombre == '',
-						fnc_ingresar(),
-						fnc_adentro(),
+					rx.card(
+						rx.cond(
+							State.nombre == '',
+							fnc_ingresar(),
+							fnc_adentro(State.nombre),
+						)
 					)
 				),
 				rx.cond(
@@ -195,6 +240,7 @@ def index() -> rx.Component:
 					('per', fnc_personas(State.personas)),
 					('pam', fnc_persona_am(State.persona)),
 					('pde', fnc_persona_detalle(State.persona, State.caps, State.extras)),
+					('pdxam', fnc_persona_detalle_extra_am(State.persona_id, State.extra_id, State.extrax)),
 				),
 				spacing="5",
 				justify_x="center",
@@ -210,10 +256,10 @@ def index() -> rx.Component:
 	)
 
 #################
-def fnc_adentro() -> rx.Component:
+def fnc_adentro(nombre) -> rx.Component:
 	return rx.box(
 		rx.hstack(
-			rx.text('Hola ', State.nombre, '!!!'),
+			rx.text('Hola ', nombre, '!!!'),
 			rx.button(rx.icon('angry'), 'Salir', on_click=State.evt_salir),
 		),
 	)
@@ -537,7 +583,6 @@ def fnc_persona(persona: list) -> rx.Component:
 			rx.hstack(
 				rx.button(rx.icon('pencil'), on_click=State.evt_persona_am(persona[0])),
 				rx.button(rx.icon('notebook-text'), on_click=State.evt_persona_detalle(persona[0])),
-				rx.button(rx.icon('info'), on_click=State.evt_persona_detalle(persona[0])),
 			),
 		),
 	)
@@ -584,10 +629,62 @@ def fnc_persona_detalle_cap(cap) -> rx.Component:
 		rx.table.cell(cap[4]),
 	)
 
+def fnc_persona_detalle_extra_am(persona_id: int, extra_id: int, extrax: list) -> rx.Component:
+	return rx.box(
+		rx.center(
+			rx.card(
+				rx.card(
+					rx.cond(
+						extra_id,
+						rx.heading('MODIFICACION EXTRA', weight="bold", align='center'),
+						rx.heading('NUEVO EXTRA', weight="bold", align='center'),
+					)
+				),
+				rx.card(
+					rx.form(
+						rx.input(value=persona_id, name='persona_id', width='0%', height='0px'),
+						rx.input(value=extra_id, name='extra_id', width='0%', height='0px'),
+						rx.vstack(
+							rx.select(State.tipoextras, default_value=extrax[0], value=extrax[0], name='extrax', width='100%'),
+							rx.input(default_value=extrax[1], type='text', name='cmntx', width='100%'),
+						),
+						rx.button('Confirmar', type='submit', style={'width':'100%'}, margin_y='1vw'),
+						on_submit=State.handle_persona_detalle_extra_am,
+						reset_on_submit=True,
+					),
+				)
+			),
+		),
+		width='100%',
+		margin_y='1vw',
+	)
+
 def fnc_persona_detalle_extra(extra) -> rx.Component:
 	return rx.table.row(
-		rx.table.cell(extra[0]),
-		rx.table.cell(extra[1]),
+		rx.table.cell(
+			rx.text(extra[2], width='100%'),
+		),
+		rx.table.cell(
+			rx.text(extra[3]),
+		),
+		rx.table.cell(
+			rx.hstack(
+				rx.button(rx.icon('pencil'), on_click=State.evt_persona_detalle_extras_am([extra[0], extra[1]])),
+				rx.alert_dialog.root(
+					rx.alert_dialog.trigger(rx.button(rx.icon('trash'))),
+					rx.alert_dialog.content(
+						rx.hstack(
+							rx.alert_dialog.description('Seguro ????'),
+							rx.flex(
+								rx.alert_dialog.cancel(rx.button('Cancel')),
+								rx.alert_dialog.action(rx.button('Ok'), on_click=State.evt_persona_detalle_extra_delete(extra[0], extra[1])),
+								spacing = '3',
+							),
+						)
+					),
+				)
+			)
+		)
 	)
 
 def fnc_persona_detalle(persona: list, caps: list, extras: list) -> rx.Component:
@@ -727,13 +824,17 @@ def fnc_persona_detalle(persona: list, caps: list, extras: list) -> rx.Component
 		),
 		rx.card(
 			rx.card(
-				rx.heading('INFORMACION EXTRA', weight="bold", align='center'),
+				rx.hstack(
+					rx.heading('INFORMACION EXTRA', weight="bold", align='center'),
+					rx.button(rx.icon('plus'), 'Nuevo', on_click=State.evt_persona_detalle_extras_am([persona[0], 0]))
+				),
 			),
 			rx.table.root(
 				rx.table.header(
 					rx.table.row(
-						rx.table.column_header_cell('Tipo', width='30%', height='0vw'),
-						rx.table.column_header_cell('Comentario', width='70%', height='0vw'),
+						rx.table.column_header_cell('Tipo', width='25%'),
+						rx.table.column_header_cell('Comentario', width='65%'),
+						rx.table.column_header_cell('Acciones', width='10%'),
 					),
 				),
 				rx.table.body(
@@ -746,17 +847,19 @@ def fnc_persona_detalle(persona: list, caps: list, extras: list) -> rx.Component
 	)
 
 
+
+
 #################
 def fnc_imagen() -> rx.Component:
 	frase, detalle = db_get_frase()
 	return rx.box(
 		rx.image(src='/bosquetaoista/EscuelaTaoistaHungLin.jpg'),
 		rx.center(
-			rx.box(
-				rx.text(frase, size='6'),
-				rx.text(detalle, size='4'),
-				padding_y='1vw'
+			rx.card(
+				rx.text(frase, size='6', align = 'center'),
+				rx.text(detalle, size='4', align = 'center'),
 			),
+			padding_y='1vw',
 			width='100%'
 		),
 	)

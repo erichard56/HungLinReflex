@@ -102,8 +102,34 @@ def db_get_persona_caps(id):
 	caps = cursor.fetchall()
 	return(caps)
 
+def db_get_persona_detalle_extra(id: int):
+	q1 = f'SELECT B.nombre, A.comentario FROM hunglin.bosquetaoista_personaextra A INNER JOIN bosquetaoista_tipoextra B ON B.id = A.tipoextra_id WHERE A.id = {id}'
+	cursor.execute(q1)
+	extra = cursor.fetchall()[0]
+	return(extra)
+
+def db_put_persona_detalle_extra(form_data: dict):
+	persona_id = form_data['persona_id']
+	extra_id = form_data['extra_id']
+	extrax = form_data['extrax']
+	cmntx = form_data['cmntx']
+	q1 = f'SELECT * from bosquetaoista_tipoextra WHERE nombre = \"{extrax}\"'
+	cursor.execute(q1)
+	tipoextra = cursor.fetchone()
+	if (form_data['extra_id'] == '0'):
+		q1 = f'INSERT INTO bosquetaoista_personaextra (id, comentario, persona_id, tipoextra_id) VALUES (0, "{cmntx}", {persona_id}, {tipoextra[0]})'
+	else:
+		q1 = f'UPDATE bosquetaoista_personaextra SET comentario = "{cmntx}", persona_id = {persona_id}, tipoextra_id = {tipoextra[0]} WHERE id = {extra_id}'
+	cursor.execute(q1)
+	conn.commit()
+
+def db_persona_detalle_extra_delete(persona_id, extra_id):
+	q1 = f'DELETE FROM bosquetaoista_personaextra WHERE persona_id = {persona_id} AND id = {extra_id}'
+	cursor.execute(q1)
+	conn.commit()
+
 def db_get_persona_extras(id):
-	q1 = f'SELECT B.nombre, a.comentario FROM hunglin.bosquetaoista_personaextra A INNER JOIN bosquetaoista_tipoextra B on B.id = A.tipoextra_id WHERE A.persona_id = {id} ORDER BY B.nombre';
+	q1 = f'SELECT A.persona_id, A.id, B.nombre, a.comentario FROM hunglin.bosquetaoista_personaextra A INNER JOIN bosquetaoista_tipoextra B on B.id = A.tipoextra_id WHERE A.persona_id = {id} ORDER BY B.nombre'
 	cursor.execute(q1)
 	extras = cursor.fetchall()
 	return(extras)
@@ -264,6 +290,30 @@ def db_put_persona(pers):
 	return
 
 
+# grados
+def db_get_Grados():
+	q1 = f'SELECT * FROM bosquetaoista_grado ORDER BY id'
+	cursor.execute(q1)
+	grados = cursor.fetchall()
+	for grado in grados:
+		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE grado_id = {grado[0]} AND estado_id = 1'
+		cursor.execute(q1)
+		activos = cursor.fetchone()
+		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE grado_id = {grado[0]} AND estado_id = 2'
+		cursor.execute(q1)
+		noactivos = cursor.fetchone()
+	print(grados, activos, noactivos)
+	# grados = session.query(models.Grado).all()
+	# for grado in grados:
+	# 	activos = session.query(models.Persona).filter(
+	# 		models.Persona.grado_id==grado.id, models.Persona.estado_id==1).count()
+	# 	noactivos = session.query(models.Persona).filter(
+	# 		models.Persona.grado_id==grado.id, models.Persona.estado_id==2).count()
+	# 	tmp = models.xGradosLista = ({'id': grado.id, 'nombre': grado.nombre, 
+	# 						'activos':activos, 'noactivos':noactivos})
+	# 	res.append(tmp)
+	# return(res)
+
 def db_get_tipoestados(todos: str=''):
 	q1 = 'SELECT nombre FROM bosquetaoista_tipoestado ORDER BY id'
 	cursor.execute(q1)
@@ -283,3 +333,9 @@ def db_get_tipodocs():
 	cursor.execute(q1)
 	tipodocs = [tipodoc[0] for tipodoc in cursor.fetchall()]
 	return(tipodocs)
+
+def db_get_tipoextras():
+	q1 = 'SELECT nombre FROM bosquetaoista_tipoextra ORDER BY nombre'
+	cursor.execute(q1)
+	tipoextras = [tp[0] for tp in cursor.fetchall()]
+	return(tipoextras)
