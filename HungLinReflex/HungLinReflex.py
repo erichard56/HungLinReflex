@@ -1,11 +1,17 @@
 import reflex as rx
+from enum import Enum
 import asyncio
 
-from .db import db_get_usuario, db_get_casas_full, db_get_casa, db_put_casa, db_get_frase, db_get_alumnos
-from .db import db_get_personas, db_get_persona, db_get_tipoestados, db_get_grados, db_get_casas, db_get_tipodocs
-from .db import db_get_tipoextras, db_get_persona_detalle_extra, db_put_persona_detalle_extra
-from .db import db_persona_detalle_extra_delete
-from .db import db_put_persona, db_get_persona_caps, db_get_persona_extras, db_get_tipoextras
+from .db import db_get_usuario, db_get_frase
+from .db import db_get_personas_lista, db_get_persona, db_get_persona_caps, db_get_persona_extras, db_get_persona_detalle_extra, db_put_persona_detalle_extra, db_persona_detalle_extra_delete, db_put_persona
+from .db import db_get_estados, db_get_casas, db_get_grados
+from .db import db_get_tipoextras, db_get_docs
+# from .db import db_get_casas_lista, db_get_casa, db_put_casa, db_del_casa, db_get_cg_alumnos
+# from .db import db_get_grados_lista, db_get_grado, db_put_grado
+# from .db import db_get_persona
+# # , db_get_grados, db_get_casas, 
+# # from .db import db_get_personas, db_get_persona, , db_put_persona 
+# # from .db import , 
 from .notify import notify_component
 
 from rxconfig import config
@@ -14,33 +20,79 @@ from rxconfig import config
 class State(rx.State):
 	opc: str = "img"
 	form_data: dict = {}
+	error: str = ''
+
 	nombre: str = ''
 	is_superuser: int
 	is_staff: int
-	error: str = ''
-	casas: list[list]
-	casa: tuple
-	casap: tuple
-	responsables: str
-	alumnos: list[tuple]
+
+	# solo para uso de seleccion en pagina personas
+	select_casas_total: list
+	select_estados_total: list
+	select_grados_total: list
+
+	selected_casa: str = 'Todas'
+	selected_estado: str = 'Activo'
+	selected_grado: str = 'Todos'
+
+	# solo para uso de tablas que no cambian
+	select_casas: list
+	select_docs: list
+	select_estados: list
+	select_grados: list
+	select_tipocursantes: list
+
+	selected_doc: str = 'DNI'
+	selected_tipocursante: str
+
+
+#########
+
 	personas: list[tuple]
+	# estados: list
+	# casas: list
+	# grados: list
+	# docs: list
+
+
 	persona: tuple
-	tipoestados: list
-	tipoestatodos: list
-	tipoestado: str
-	grados: list
-	grado: str
-	casaspr: list
-	tipodocs: list
-	tipodoc: str
-	casa1: str
+	persona_id: int
 	caps: list[tuple]
 	extras: list[tuple]
 	tipoextras: list
-	extra: tuple
-	persona_id: int
 	extra_id: int
-	extrax: tuple
+	extra: tuple
+
+	# casas_lista: list[list]
+	# casa: tuple
+	# responsables: str
+
+	# gradox: list[list]
+	# grado: list
+	# grados_lista: list
+
+
+	# alumnos: list[tuple]
+
+
+
+
+	# casas
+	# casap: tuple
+	# persona: tuple
+	# tipoestados: list
+	# tipoestado: str
+	# casaspr: list
+	# tipodocs: list
+	# tipodoc: str
+	# casa1: str
+	# extra: tuple
+	# casa_practica: str
+
+	@rx.event()
+	def cargar_tablas(self):
+		self.select_docs: db_get_docs()
+		self.select_tipocursantes: db_get_tipocursantes()
 
 
 # handle's
@@ -68,24 +120,39 @@ class State(rx.State):
 			await self.handle_notify()
 
 	@rx.event(background=True)
-	async def handle_casa_am(self, form_data: dict):
+	async def evt_select_estado(self, value):
 		async with self:
-			self.form_data = form_data
-			if (form_data['nombre'] and form_data['direccion']):
-				casa = db_put_casa(form_data['id'], form_data['nombre'], form_data['direccion'])
-				self.casas = db_get_casas_full()
-				self.opc = 'cas'
-			else:
-				self.error = 'Falta nombre o direccion'
-		if (self.error != ''):
-			await self.handle_notify()
+			self.selected_estado = value
+
+	@rx.event(background=True)
+	async def evt_select_casa(self, value):
+		async with self:
+			self.selected_casa = value
+
+	@rx.event(background=True)
+	async def evt_select_grado(self, value):
+		async with self:
+			self.selected_grado = value
+
+	# @rx.event(background=True)
+	# async def handle_casa_am(self, form_data: dict):
+	# 	async with self:
+	# 		self.form_data = form_data
+	# 		if (form_data['nombre'] and form_data['direccion']):
+	# 			db_put_casa(form_data['id'], form_data['nombre'], form_data['direccion'])
+	# 			self.casas_lista = db_get_casas_lista()
+	# 			self.opc = 'cas'
+	# 		else:
+	# 			self.error = 'Falta nombre o direccion'
+	# 	if (self.error != ''):
+	# 		await self.handle_notify()
 
 	@rx.event(background=True)
 	async def handle_persona_am(self, form_data: dict):
 		async with self:
 			form_persona = form_data
 			persona = db_put_persona(form_data)
-			self.personas = db_get_personas()
+			self.personas = db_get_personas_lista('', self.selected_estado, self.selected_casa, self.selectedgrado)
 			self.opc = 'per'
 		if (self.error != ''):
 			await self.handle_notify()
@@ -93,8 +160,10 @@ class State(rx.State):
 	@rx.event(background=True)
 	async def handle_personas(self, form_data: dict):
 		async with self:
-			form_persona = form_data
-			self.personas = db_get_personas(form_data['busq'], form_data['estado'])
+			self.select_casas_total = db_get_casas('T')
+			self.select_estados_total = db_get_estados('T')
+			self.select_grados_total = db_get_grados('T')
+			self.personas = db_get_personas_lista(form_data['busq'], self.selected_estado, self.selected_casa, self.selected_grado)
 			self.opc = 'per'
 		if (self.error != ''):
 			await self.handle_notify()
@@ -111,63 +180,70 @@ class State(rx.State):
 		if (self.error != ''):
 			await self.handle_notify()
 
-	@rx.event()
-	def evt_tipoestado(self, value: str):
-		self.tipoestado = value
+# 	@rx.event()
+# 	def evt_tipoestado(self, value: str):
+# 		self.tipoestado = value
 
-	@rx.event()
-	def evt_grado(self, value: str):
-		self.grado = value
+# 	@rx.event()
+# 	def evt_grado(self, value: str):
+# 		self.grado = value
 
 
 # eventos casas
-	@rx.event(background=True)
-	async def evt_casa_am(self, id):
-		async with self:
-			if (id != 0):
-				self.casa = db_get_casa(id)
-			else:
-				self.casa = (0, '', '')
-			self.opc = "cam"
+	# @rx.event(background=True)
+	# async def evt_casas_lista(self):
+	# 	async with self:
+	# 		self.casas_lista = db_get_casas_lista()
+	# 		self.opc = "cas"
 
-	@rx.event(background=True)
-	async def evt_casa_detalle(self, id):
-		async with self:
-			self.casap, self.responsables, self.alumnos = db_get_alumnos(id)
-			self.opc = "cad"
+	# @rx.event(background=True)
+	# async def evt_casa_am(self, id):
+	# 	async with self:
+	# 		self.casa = db_get_casa(id)
+	# 		self.opc = "cam"
 
-	@rx.event(background=True)
-	async def evt_casas(self):
-		async with self:
-			self.casas = db_get_casas_full()
-			self.opc = "cas"
+	# @rx.event(background=True)
+	# async def evt_del_casa(self, casa_id):
+	# 	async with self:
+	# 		db_del_casa(casa_id)
+	# 		self.casas_lista = db_get_casas_lista()
+	# 		self.opc = "cas"
+
+	# @rx.event(background=True)
+	# async def evt_cg_alumnos(self, id):
+	# 	async with self:
+	# 		self.responsables, self.alumnos = db_get_cg_alumnos(id, 0)
+	# 		self.opc = "cg"
+
 
 # eventos persona
 	@rx.event(background=True)
 	async def evt_personas(self):
 		async with self:
-			self.personas = db_get_personas(busq='', estado='Todos')
-			self.tipoestatodos = db_get_tipoestados('T')
+			self.select_casas_total = db_get_casas('T')
+			self.select_estados_total = db_get_estados('T')
+			self.select_grados_total = db_get_grados('T')
+			self.personas = db_get_personas_lista('', 'Activo', 'Todas', 'Todos')
 			self.opc = "per"
 
 	@rx.event(background=True)
 	async def evt_persona_am(self, id):
 		async with self:
-			self.tipoestados = db_get_tipoestados()
-			self.grados = db_get_grados()
-			self.casaspr = db_get_casas()
-			self.tipodocs = db_get_tipodocs()
+			self.select_estados = db_get_estados()
+			self.select_grados = db_get_grados()
+			self.select_casas = db_get_casas()
+			self.select_docs = db_get_docs()
 			if (int(id) != 0):
 				self.persona = db_get_persona(int(id))
-				self.tipoestado = self.persona[1]
-				self.grado = self.persona[6]
-				self.casa1 = self.persona[7]
-				self.tipodoc = self.persona[17]
+				self.selected_estado = self.persona[1]
+				self.selected_grado = self.persona[6]
+				self.selected_casa = self.persona[7]
+				self.selected_doc = self.persona[17]
 			else:
 				self.persona = db_get_persona(0)
-				self.tipoestado = 'Activo'
-				self.grado = 'Alumno'
-				self.tipodoc = 'DNI'
+				self.selected_estado = 'Activo'
+				self.selected_grado = 'Alumno'
+				self.selected_doc = 'DNI'
 			self.opc = "pam"
 
 	@rx.event(background=True)
@@ -179,7 +255,6 @@ class State(rx.State):
 			self.extras = db_get_persona_extras(persona_id)
 			self.tipoextras = db_get_tipoextras()
 			self.opc = 'pde'
-
 
 	@rx.event(background=True)
 	async def evt_persona_detalle(self, id):
@@ -195,12 +270,43 @@ class State(rx.State):
 		async with self:
 			self.persona_id, self.extra_id = ids
 			if (self.extra_id > 0):
-				self.extrax = db_get_persona_detalle_extra(self.extra_id)
+				self.extra = db_get_persona_detalle_extra(self.extra_id)
 				self.opc = 'pde'
 			else:
-				self.extrax = ()
+				self.extra = ()
 			self.opc = 'pdxam'
 
+# eventos grados
+	# @rx.event(background=True)
+	# async def evt_grados_lista(self):
+	# 	async with self:
+	# 		self.gradox = db_get_grados_lista()
+	# 		self.opc = "gra"
+
+	# @rx.event(background=True)
+	# async def evt_grado_detalle(self, grado_id):
+	# 	async with self:
+	# 		self.responsables, self.alumnos = db_get_cg_alumnos(0, grado_id)
+	# 		self.opc = "cg"
+			
+	# @rx.event(background=True)
+	# async def evt_grado_am(self, id):
+	# 	async with self:
+	# 		self.grado = db_get_grado(id)
+	# 		self.opc = "gam"
+
+	# @rx.event(background=True)
+	# async def handle_grado_am(self, form_data: dict):
+	# 	async with self:
+	# 		self.form_data = form_data
+	# 		if (form_data['nombre']):
+	# 			db_put_grado(form_data['id'], form_data['nombre'])
+	# 			self.grados_lista = db_get_grados_lista()
+	# 			self.opc = 'gra'
+	# 		else:
+	# 			self.error = 'Falta nombre'
+	# 	if (self.error != ''):
+	# 		await self.handle_notify()
 
 # eventos varios
 	@rx.event(background=True)
@@ -234,13 +340,18 @@ def index() -> rx.Component:
 				rx.match(
 					State.opc,
 					('img', fnc_imagen()),
-					('cas', fnc_casas()),
-					('cam', fnc_casa_am(State.casa)),
-					('cad', fnc_casa_alumnos(State.alumnos)),
-					('per', fnc_personas(State.personas)),
-					('pam', fnc_persona_am(State.persona)),
+
+					# ('cas', fnc_casas_lista(State.casas_lista)),
+					# ('cam', fnc_casa_am(State.casa)),
+					# ('cg', fnc_cg_alumnos(State.responsables, State.alumnos)),
+
+					('per', fnc_personas(State.personas, State.select_estados_total, State.select_casas_total, State.select_grados_total)),
+					('pam', fnc_persona_am(State.persona, State.select_estados, State.select_casas, State.select_docs)),
 					('pde', fnc_persona_detalle(State.persona, State.caps, State.extras)),
-					('pdxam', fnc_persona_detalle_extra_am(State.persona_id, State.extra_id, State.extrax)),
+					('pdxam', fnc_persona_detalle_extra_am(State.persona_id, State.extra_id, State.extra, State.tipoextras)),
+
+					# ('gra', fnc_grados_lista(State.gradox)),
+					# ('gam', fnc_grado_am(State.grado)),
 				),
 				spacing="5",
 				justify_x="center",
@@ -264,109 +375,238 @@ def fnc_adentro(nombre) -> rx.Component:
 		),
 	)
 
-#################
-def fnc_casa(casa: list) -> rx.Component:
-	return rx.table.row(
-		rx.table.cell(casa[1]),
-		rx.table.cell(casa[2]),
-		rx.table.cell(casa[3]),
-		rx.table.cell(casa[4]),
-		rx.table.cell(
-			rx.hstack(
-				rx.button(rx.icon('pencil'), on_click=State.evt_casa_am(casa[0])),
-				rx.button(rx.icon('users'), on_click=State.evt_casa_detalle(casa[0])),
-			)
-		)
-	)
+################# Casas
 
-def fnc_casas() -> rx.Component:
-	return rx.card(
-		rx.text(
-			rx.button(rx.icon('plus'), 'CASAS'), 
-			align='right', 
-			on_click=State.evt_casa_am(0)
-		),
-		rx.table.root(
-			rx.table.row(
-				rx.table.column_header_cell('Nombre'),
-				rx.table.column_header_cell('Direccion'),
-				rx.table.column_header_cell('Responsable'),
-				rx.table.column_header_cell('Alumnos (A/N/F)'),
-				rx.table.column_header_cell('Acciones'),
-			),
-			rx.table.body(
-				rx.foreach(State.casas, fnc_casa),
-			),
-		),
-	)
+# def fnc_casa_row(casa: list) -> rx.Component:
+# 	return rx.table.row(
+# 		rx.table.cell(casa[1], vertical_align='middle'),
+# 		rx.table.cell(casa[2], vertical_align='middle'),
+# 		rx.table.cell(casa[3], vertical_align='middle'),
+# 		rx.table.cell(casa[4], vertical_align='middle'),
+# 		rx.table.cell(
+# 			rx.hstack(
+# 				rx.button(rx.icon('pencil'), on_click=State.evt_casa_am(casa[0])),
+# 				rx.button(rx.icon('users'), on_click=State.evt_cg_alumnos(casa[0])),
+# 				fnc_del_confirmation(casa[0], State.evt_del_casa),
+# 			)
+# 		)
+# 	)
 
-def fnc_casa_am(casa) -> rx.Component:
-	return rx.center(
-		rx.card(
-			rx.cond(
-				casa[0] == 0,
-				rx.text('NUEVA CASA', weight="bold", align='center'),
-				rx.text('MODIFICACION CASA', weight="bold", align='center')
-			),
-			rx.form(
-				rx.vstack(
-					rx.box(
-						rx.input(value=casa[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
-					),
-					rx.input(type='text', default_value=casa[1], name='nombre', style={'width':'200px'}),
-					rx.input(type='text', default_value=casa[2], name='direccion', style={'width':'200px'}),
-					rx.button('Confirmar', type='submit', style={'width':'100%'})
-				),
-				on_submit=State.handle_casa_am,
-				reset_on_submit=True,
-			)
-		),
-		width='100%',
-		margin_y='2vw'
-	)
+# def fnc_casas_lista(casas_lista) -> rx.Component:
+# 	return rx.box(
+# 		rx.card(
+# 			rx.heading('CASAS', align='center'),
+# 			rx.heading(
+# 				rx.button(rx.icon('plus'), 'CASA'), 
+# 				align='right', 
+# 				on_click=State.evt_casa_am(0)
+# 			),
+# 		),
+# 		rx.card(
+# 			rx.table.root(
+# 				rx.table.row(
+# 					rx.table.column_header_cell('Nombre'),
+# 					rx.table.column_header_cell('Direccion'),
+# 					rx.table.column_header_cell('Responsable'),
+# 					rx.table.column_header_cell('Alumnos (A/N/F)'),
+# 					rx.table.column_header_cell('Acciones'),
+# 				),
+# 				rx.table.body(
+# 					rx.foreach(casas_lista, fnc_casa_row),
+# 				),
+# 			),
+# 		)
+# 	)
 
-def fnc_casa_alumno(alumno) -> rx.Component:
-	return rx.table.row(
-		rx.table.cell(alumno[1]),
-		rx.table.cell(
-			rx.hstack(
-				rx.image(alumno[2], width='10%', high='auto'), 
-				alumno[3]
-			),
-		),
-		rx.table.cell(alumno[4]),
-		rx.table.cell(
-			rx.hstack(
-				rx.button(rx.icon('pencil')), #, on_click=State.evt_casa_am(casa[0])),
-				rx.button(rx.icon('users')), #, on_click=State.evt_casa_detalle(casa[0])),
-			)
-		),
-		width='100%'
-	)
+# def fnc_casa_am(casa) -> rx.Component:
+# 	return rx.center(
+# 		rx.box(
+# 			rx.card(
+# 				rx.cond(
+# 					casa[0] == 0,
+# 					rx.text('NUEVA CASA', weight="bold", align='center'),
+# 					rx.text('MODIFICACION CASA', weight="bold", align='center')
+# 				),
+# 			),
+# 			rx.card(
+# 				rx.form(
+# 					rx.vstack(
+# 						rx.input(value=casa[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
+# 						rx.hstack(
+# 							rx.text('Nombre: '),
+# 							rx.input(type='text', default_value=casa[1], name='nombre', style={'width':'200px'}),
+# 						),
+# 						rx.hstack(
+# 							rx.text('Dirección: '),
+# 							rx.input(type='text', default_value=casa[2], name='direccion', style={'width':'200px'}),
+# 						),
+# 						rx.button('Confirmar', type='submit', style={'width':'100%'})
+# 					),
+# 					on_submit=State.handle_casa_am,
+# 					reset_on_submit=True,
+# 				)
+# 			)
+# 		),
+# 		width='100%',
+# 		margin_y='2vw'
+# 	)
 
-def fnc_casa_alumnos(alumnos) -> rx.Component:
-	return rx.card(
-		rx.text('CASA ', State.casap, size='6', align='center'),
-		rx.divider(),
-		rx.text('RESPONSABLE(S) ', State.responsables, size='5', align='center'),
-		rx.divider(),
-		rx.text('ALUMNOS', align='left'),
-		rx.table.root(
-			rx.table.row(
-				rx.table.column_header_cell('Orden'),
-				rx.table.column_header_cell('Apellido y Nombre'),
-				rx.table.column_header_cell('Grado'),
-				rx.table.column_header_cell('Acciones'),
-			),
-			rx.table.body(
-				rx.foreach(State.alumnos, fnc_casa_alumno),
-			),
-		),
-	)
+# def fnc_cg_alumno(alumno) -> rx.Component:
+# 	return rx.table.row(
+# 		rx.table.cell(alumno[1], vertical_align='middle'),
+# 		rx.table.cell(rx.image(alumno[2], width='100%', high='auto')),
+# 		rx.table.cell(alumno[3], vertical_align='middle'),
+# 		rx.table.cell(alumno[4], vertical_align='middle'),
+# 		rx.table.cell(alumno[5], vertical_align='middle'),
+# 		rx.table.cell(
+# 			rx.hstack(
+# 				rx.button(rx.icon('pencil')), #, on_click=State.evt_casa_am(casa[0])),
+# 				rx.button(rx.icon('notebook-text'), on_click=State.evt_persona_detalles(alumno[0])),
+# 			)
+# 		),
+# 		width='100%',
+# 	)
 
-#################
+# def fnc_cg_alumnos(responsables, alumnos) -> rx.Component:
+# 	return rx.box(
+# 		rx.cond(
+# 			responsables,
+# 			rx.card(rx.text('RESPONSABLE(S) ', responsables, size='5', align='center')),
+# 		),
+# 		rx.card(
+# 			rx.text('ALUMNOS', align='left'),
+# 			rx.table.root(
+# 				rx.table.row(
+# 					rx.table.column_header_cell('Orden', width='10%'),
+# 					rx.table.column_header_cell('Foto', width='10%'),
+# 					rx.table.column_header_cell('Apellido y Nombre', width='40%'),
+# 					rx.table.column_header_cell('Grado', width='20%'),
+# 					rx.table.column_header_cell('Casa de Practica', width='20%'),
+# 					rx.table.column_header_cell('Acciones', width='10%'),
+# 				),
+# 				rx.table.body(
+# 					rx.foreach(alumnos, fnc_cg_alumno),
+# 				),
+# 			),
+# 		)
+# 	)
 
-def fnc_persona_am(persona: list) -> rx.Component:
+
+
+################# Grados
+# def fnc_grado(grado: list) -> rx.Component:
+# 	return rx.table.row(
+# 		rx.table.cell(grado[1]),
+# 		rx.table.cell(grado[2]),
+# 		rx.table.cell(grado[3]),
+# 		rx.table.cell(
+# 			rx.hstack(
+# 				rx.button(rx.icon('pencil'), on_click=State.evt_grado_am(grado[0])),
+# 				rx.button(rx.icon('users'), on_click=State.evt_grado_detalle(grado[0])),
+# 			)
+# 		)
+# 	)
+
+# def fnc_grados_lista(grados) -> rx.Component:
+# 	return rx.box(
+# 			rx.card(
+# 				rx.heading('GRADOS', align='center'),
+# 				rx.text(
+# 					rx.button(rx.icon('plus'), 'GRADOS'), 
+# 					align='right', 
+# 					on_click=State.evt_grado_am(0)
+# 				),
+# 			),
+# 				rx.card(
+
+# 		rx.table.root(
+# 			rx.table.row(
+# 				rx.table.column_header_cell('Nombre', width='50%'),
+# 				rx.table.column_header_cell('Activos', width='15%'),
+# 				rx.table.column_header_cell('No Activos', width='15%'),
+# 				rx.table.column_header_cell('Acciones', width='10%'),
+# 			),
+# 			rx.table.body(
+# 				rx.foreach(grados, fnc_grado),
+# 			),
+# 		),
+# 		),
+# 		width='100%'
+# 	)
+
+# def fnc_grado_alumno(alumno) -> rx.Component:
+# 	return rx.table.row(
+# 		rx.table.cell(alumno[1]),
+# 		rx.table.cell(
+# 			rx.hstack(
+# 				rx.image(alumno[2], width='10%', high='auto'), 
+# 				alumno[3]
+# 			),
+# 		),
+# 		rx.table.cell(alumno[4]),
+# 		rx.table.cell(
+# 			rx.hstack(
+# 				rx.button(rx.icon('pencil')), #, on_click=State.evt_casa_am(casa[0])),
+# 				rx.button(rx.icon('users')) #, on_click=State.evt_casa_detalle(casa[0])),
+# 			)
+# 		),
+# 		width='100%'
+# 	)
+
+# def fnc_grado_alumnos(grado, alumnos) -> rx.Component:
+# 	return rx.box(
+# 		rx.card(
+# 			rx.text('GRADO ', grado, size='6', align='center'),
+# 		),
+# 		rx.card(
+# 			rx.text('ALUMNOS', align='left'),
+# 			rx.table.root(
+# 				rx.table.row(
+# 					rx.table.column_header_cell('Orden', width='10%'),
+# 					rx.table.column_header_cell('Apellido y Nombre', width='50%'),
+# 					rx.table.column_header_cell('Casa de Practica', width='30%'),
+# 					rx.table.column_header_cell('Acciones', width='10%'),
+# 				),
+# 				rx.table.body(
+# 					rx.foreach(alumnos, fnc_grado_alumno),
+# 				),
+# 			),
+# 		)
+# 	)
+
+# def fnc_grado_am(grado) -> rx.Component:
+# 	return rx.center(
+# 		rx.box(
+# 			rx.card(
+# 				rx.cond(
+# 					grado[0] == 0,
+# 					rx.text('NUEVO GRADO', weight="bold", align='center'),
+# 					rx.text('MODIFICACION GRADO', weight="bold", align='center')
+# 				),
+# 			),
+# 			rx.card(
+# 				rx.form(
+# 					rx.vstack(
+# 						rx.input(value=grado[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
+# 						rx.hstack(
+# 							rx.text('Nombre: '),
+# 							rx.input(type='text', default_value=grado[1], name='nombre', style={'width':'200px'}),
+# 						),
+# 						rx.button('Confirmar', type='submit', style={'width':'100%'})
+# 					),
+# 					on_submit=State.handle_grado_am,
+# 					reset_on_submit=True,
+# 				)
+# 			)
+# 		),
+# 		width='100%',
+# 		margin_y='2vw'
+# 	)
+
+
+################# Personas
+
+def fnc_persona_am(persona: list, estados, casas, docs) -> rx.Component:
 	return rx.box(
 		rx.card(
 			rx.cond(
@@ -388,7 +628,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('*Estado: '),
-									rx.select(State.tipoestados, default_value=persona[1], value=persona[1], name='estado'),
+									rx.select(estados, default_value=persona[1], value=persona[1], name='estado'),
 								),
 							),
 							rx.table.cell(
@@ -426,7 +666,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('*Grado: '),
-									rx.select(State.grados, default_value=persona[6], name='grado', required=True),
+									rx.select(State.select_grados, default_value=persona[6], name='grado', required=True),
 								),
 							)
 						),
@@ -434,7 +674,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('*Casa de Practica: '),
-									rx.select(State.casaspr, default_value=persona[7], name='casapractica', required=True), 
+									rx.select(casas, default_value=persona[7], name='casapractica', required=True), 
 								),
 							),
 							rx.table.cell(
@@ -442,8 +682,8 @@ def fnc_persona_am(persona: list) -> rx.Component:
 									rx.text('Responsable Casa: '),
 									rx.cond(
 										persona[8],
-										rx.select(State.casaspr, default_value=persona[8], name='responsablecasa', required=False), 
-										rx.select(State.casaspr, default_value=None, name='responsablecasa', required=False), 
+										rx.select(casas, default_value=persona[8], name='responsablecasa', required=False), 
+										rx.select(casas, default_value=None, name='responsablecasa', required=False), 
 									)
 								),
 							)
@@ -509,7 +749,7 @@ def fnc_persona_am(persona: list) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('Documento: '),
-									rx.select(State.tipodocs, default_value=persona[17], name='tipodoc'), 
+									rx.select(docs, default_value=persona[17], name='tipodoc'), 
 									rx.input(type='text', default_value=persona[18], name='nrodoc', style={'width':'200px'}),
 								)
 							)
@@ -587,14 +827,16 @@ def fnc_persona(persona: list) -> rx.Component:
 		),
 	)
 
-def fnc_personas(personas) -> rx.Component:
-	return rx.card(
+def fnc_personas(personas, estados, casas, grados) -> rx.Component:
+	return rx.box(
 		rx.card(
 			rx.hstack(
 				rx.form(
 					rx.hstack(
 						rx.input(placeholder='Buscar...', type='text', name='busq'),
-						rx.select(State.tipoestatodos, name='estado', default_value='Activo'),
+						rx.select(estados, name='estado', defaut_value=State.selected_estado, on_change=State.evt_select_estado),
+						rx.select(casas, name='casa', default_value=State.selected_casa, on_change=State.evt_select_casa),
+						rx.select(grados, name='grado', default_value=State.selected_grado, on_change=State.evt_select_grado),
 						rx.button(rx.icon('search'), 'Buscar', type='submit'),
 					),
 					on_submit=State.handle_personas,
@@ -604,18 +846,20 @@ def fnc_personas(personas) -> rx.Component:
 			),
 		),
 
-		rx.table.root(
-			rx.table.row(
-				rx.table.column_header_cell('Orden', width='5%'),
-				rx.table.column_header_cell('Estado', width='10%'),
-				rx.table.column_header_cell('Foto', width='10%'),
-				rx.table.column_header_cell('Apellido y Nombre', width='25%'),
-				rx.table.column_header_cell('Grado', width='10%'),
-				rx.table.column_header_cell('Casa de Practica', width='10%'),
-				rx.table.column_header_cell('Acciones', width='10%'),
-			),
-			rx.table.body(
-				rx.foreach(personas, fnc_persona),
+		rx.card(
+			rx.table.root(
+				rx.table.row(
+					rx.table.column_header_cell('Orden', width='5%'),
+					rx.table.column_header_cell('Estado', width='10%'),
+					rx.table.column_header_cell('Foto', width='10%'),
+					rx.table.column_header_cell('Apellido y Nombre', width='25%'),
+					rx.table.column_header_cell('Grado', width='10%'),
+					rx.table.column_header_cell('Casa de Practica', width='10%'),
+					rx.table.column_header_cell('Acciones', width='10%'),
+				),
+				rx.table.body(
+					rx.foreach(personas, fnc_persona),
+				),
 			),
 		),
 	)
@@ -629,30 +873,32 @@ def fnc_persona_detalle_cap(cap) -> rx.Component:
 		rx.table.cell(cap[4]),
 	)
 
-def fnc_persona_detalle_extra_am(persona_id: int, extra_id: int, extrax: list) -> rx.Component:
+def fnc_persona_detalle_extra_am(persona_id: int, extra_id: int, extras: list, tipoextras) -> rx.Component:
 	return rx.box(
 		rx.center(
-			rx.card(
+			rx.vstack(
 				rx.card(
 					rx.cond(
 						extra_id,
 						rx.heading('MODIFICACION EXTRA', weight="bold", align='center'),
 						rx.heading('NUEVO EXTRA', weight="bold", align='center'),
-					)
+					),
+					width='100%'
 				),
 				rx.card(
 					rx.form(
 						rx.input(value=persona_id, name='persona_id', width='0%', height='0px'),
 						rx.input(value=extra_id, name='extra_id', width='0%', height='0px'),
 						rx.vstack(
-							rx.select(State.tipoextras, default_value=extrax[0], value=extrax[0], name='extrax', width='100%'),
-							rx.input(default_value=extrax[1], type='text', name='cmntx', width='100%'),
+							rx.select(tipoextras, default_value=extras[0], value=extras[0], name='extra', width='100%'),
+							rx.input(default_value=extras[1], type='text', name='cmntx', width='100%'),
 						),
 						rx.button('Confirmar', type='submit', style={'width':'100%'}, margin_y='1vw'),
 						on_submit=State.handle_persona_detalle_extra_am,
 						reset_on_submit=True,
 					),
-				)
+					width='100%'
+				),
 			),
 		),
 		width='100%',
@@ -690,9 +936,9 @@ def fnc_persona_detalle_extra(extra) -> rx.Component:
 def fnc_persona_detalle(persona: list, caps: list, extras: list) -> rx.Component:
 	return rx.box(
 		rx.card(
-			rx.card(
-				rx.heading(persona[3], ', ', persona[4], weight="bold", align='center'),
-			),
+			rx.heading(persona[3], ', ', persona[4], weight="bold", align='center'),
+		),
+		rx.card(
 			rx.table.root(
 				rx.table.header(
 					rx.table.row(
@@ -803,10 +1049,11 @@ def fnc_persona_detalle(persona: list, caps: list, extras: list) -> rx.Component
 				),
 			)
 		),
+
 		rx.card(
-			rx.card(
-				rx.heading('CURSOS / ACTIVIDADES / PRACTICAS', weight="bold", align='center'),
-			),
+			rx.heading('CURSOS / ACTIVIDADES / PRACTICAS', weight="bold", align='center'),
+		),
+		rx.card(
 			rx.table.root(
 				rx.table.header(
 					rx.table.row(
@@ -822,13 +1069,14 @@ def fnc_persona_detalle(persona: list, caps: list, extras: list) -> rx.Component
 				),
 			),
 		),
+
 		rx.card(
-			rx.card(
-				rx.hstack(
-					rx.heading('INFORMACION EXTRA', weight="bold", align='center'),
-					rx.button(rx.icon('plus'), 'Nuevo', on_click=State.evt_persona_detalle_extras_am([persona[0], 0]))
-				),
+			rx.heading('INFORMACION EXTRA', weight="bold", align='center'),
+			rx.heading(
+				rx.button(rx.icon('plus'), 'Nuevo', on_click=State.evt_persona_detalle_extras_am([persona[0], 0])), align='right'
 			),
+		),
+		rx.card(
 			rx.table.root(
 				rx.table.header(
 					rx.table.row(
@@ -849,7 +1097,7 @@ def fnc_persona_detalle(persona: list, caps: list, extras: list) -> rx.Component
 
 
 
-#################
+################## Varios
 def fnc_imagen() -> rx.Component:
 	frase, detalle = db_get_frase()
 	return rx.box(
@@ -884,13 +1132,30 @@ def fnc_menu() -> rx.Component:
 				rx.button(rx.icon('users-round'), 'Personas', on_click=State.evt_personas()),
 				rx.button(rx.icon('calendar-days'), 'Agenda'),
 				rx.button(rx.icon('ticket'), 'Eventos'),
-				rx.button(rx.icon('house'), 'Casas', on_click=State.evt_casas()),
-				rx.button(rx.icon('graduation-cap'), 'Grados'),
+				rx.button(rx.icon('house'), 'Casas'), #, on_click=State.evt_casas_lista()),
+				rx.button(rx.icon('graduation-cap'), 'Grados'), #, on_click=State.evt_grados_lista()),
 				rx.button(rx.icon('list'), 'Tipo Eventos'),
 				rx.button(rx.icon('list'), 'Extras'),
 			),
 		),
 		width='100%',
+	)
+
+def fnc_del_confirmation(casa_id, fnc) -> rx.Component:
+	return rx.box(
+		rx.alert_dialog.root(
+			rx.alert_dialog.trigger(rx.button(rx.icon('trash'))),
+			rx.alert_dialog.content(
+				rx.hstack(
+					rx.alert_dialog.description('Seguro ????'),
+					rx.flex(
+						rx.alert_dialog.cancel(rx.button('Cancel')),
+						rx.alert_dialog.action(rx.button('Ok'), on_click=fnc(casa_id)),
+						spacing = '3',
+					),
+				)
+			),
+		)
 	)
 
 
