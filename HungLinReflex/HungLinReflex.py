@@ -223,27 +223,24 @@ class State(rx.State):
 			self.select_casas_total = db_get_casas('T')
 			self.select_estados_total = db_get_estados('T')
 			self.select_grados_total = db_get_grados('T')
-			self.personas = db_get_personas_lista('', 'Activo', 'Todas', 'Todos')
+			self.selected_estado = 'Activo'
+			self.selected_casa = 'Todas'
+			self.selected_grado = 'Todos'
+			self.personas = db_get_personas_lista('', self.selected_estado, self.selected_casa, self.selected_grado)
 			self.opc = "per"
 
 	@rx.event(background=True)
 	async def evt_persona_am(self, id):
 		async with self:
+			self.persona = db_get_persona(int(id))
 			self.select_estados = db_get_estados()
 			self.select_grados = db_get_grados()
 			self.select_casas = db_get_casas()
 			self.select_docs = db_get_docs()
-			if (int(id) != 0):
-				self.persona = db_get_persona(int(id))
-				self.selected_estado = self.persona[1]
-				self.selected_grado = self.persona[6]
-				self.selected_casa = self.persona[7]
-				self.selected_doc = self.persona[17]
-			else:
-				self.persona = db_get_persona(0)
-				self.selected_estado = 'Activo'
-				self.selected_grado = 'Alumno'
-				self.selected_doc = 'DNI'
+			self.selected_estado = self.persona[1]
+			self.selected_grado = self.persona[6]
+			self.selected_casa = self.persona[7]
+			self.selected_doc = self.persona[17]
 			self.opc = "pam"
 
 	@rx.event(background=True)

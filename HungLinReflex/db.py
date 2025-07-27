@@ -97,7 +97,7 @@ def db_get_usuario(usuario, clave):
 # personas
 def db_get_persona(id):
 	if (int(id) != 0):
-		q1 = f'SELECT A.id, B.nombre as estado, A.orden, A.apellido, A.nombre, A.usuario, C.nombre as grado, D.nombre as casa_practica, E.nombre as responsable_casa, A.direccion, A.localidad, A.codigo_postal, A.email, A.fechanacimiento, A.fechaingreso, A.fechaegreso, A.celular, F.nombre as tipodoc, A.nrodoc, A.clave, A.is_superuser, A.is_staff, CASE WHEN A.foto is NULL OR A.foto = "" THEN "/bosquetaoista/nophoto.jpg" ELSE foto END as foto, CASE WHEN A.certificado is NULL or A.certificado = "" THEN "/bosquetaoista/nocert.png" ELSE certificado END as certificado FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id INNER JOIN bosquetaoista_casa D on D.id = A.casa_practica_id LEFT JOIN bosquetaoista_casa E on E.id = A.responsable_casa_id LEFT JOIN bosquetaoista_tipodoc F on F.id = A.tipodoc_id WHERE A.id = {id}'
+		q1 = f'SELECT A.id, B.nombre as estado, A.orden, A.apellido, A.nombre, A.usuario, C.nombre as grado, D.nombre as casa_practica, E.nombre as responsable_casa, A.direccion, A.localidad, A.codigo_postal, A.email, A.fechanacimiento, A.fechaingreso, A.fechaegreso, A.celular, F.nombre as tipodoc, A.nrodoc, A.clave, A.is_superuser, A.is_staff, CASE WHEN A.foto is NULL OR A.foto = "" THEN "/bosquetaoista/nophoto.jpg" ELSE foto END as foto, CASE WHEN A.certificado is NULL or A.certificado = "" THEN "/bosquetaoista/nocert.png" ELSE certificado END as certificado FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id LEFT JOIN bosquetaoista_casa D on D.id = A.casa_practica_id LEFT JOIN bosquetaoista_casa E on E.id = A.responsable_casa_id LEFT JOIN bosquetaoista_tipodoc F on F.id = A.tipodoc_id WHERE A.id = {id}'
 		cursor.execute(q1)
 		persona = cursor.fetchone()
 	else:
@@ -144,7 +144,7 @@ def db_persona_detalle_extra_delete(persona_id, extra_id):
 
 
 def db_get_personas_lista(busq, estado, casa, grado):
-	q1 = 'SELECT A.id, A.orden, B.nombre as estado, CASE WHEN A.foto is NULL OR A.foto = "" THEN "/bosquetaoista/nophoto.jpg" ELSE foto END as foto, CONCAT(A.apellido, ", ", A.nombre), C.nombre as grado, D.nombre as casapractica FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id INNER JOIN bosquetaoista_casa D on D.id = A.casa_practica_id WHERE '
+	q1 = 'SELECT A.id, A.orden, B.nombre as estado, CASE WHEN A.foto is NULL OR A.foto = "" THEN "/bosquetaoista/nophoto.jpg" ELSE foto END as foto, CONCAT(A.apellido, ", ", A.nombre), C.nombre as grado, D.nombre as casapractica FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id LEFT JOIN bosquetaoista_casa D on D.id = A.casa_practica_id WHERE '
 	if (len(busq)):
 		q1 += f' A.nombre LIKE "%{busq}%" OR A.apellido LIKE "%{busq}%" AND '
 	if (estado != 'Todos'):
