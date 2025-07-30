@@ -6,12 +6,12 @@ from .db import db_get_usuario, db_get_frase
 from .db import db_get_personas_lista, db_get_persona, db_get_persona_caps, db_get_persona_extras, db_get_persona_detalle_extra, db_put_persona_detalle_extra, db_persona_detalle_extra_delete, db_put_persona
 from .db import db_get_estados, db_get_casas, db_get_grados
 from .db import db_get_tipoextras, db_get_docs
-# from .db import db_get_casas_lista, db_get_casa, db_put_casa, db_del_casa, db_get_cg_alumnos
-# from .db import db_get_grados_lista, db_get_grado, db_put_grado
-# from .db import db_get_persona
-# # , db_get_grados, db_get_casas, 
-# # from .db import db_get_personas, db_get_persona, , db_put_persona 
-# # from .db import , 
+from .db import db_get_casas_lista, db_get_casa, db_put_casa, db_del_casa
+from .db import db_get_eventos_lista, db_get_evento, db_del_evento, db_put_evento
+from .db import db_get_grados_lista, db_get_grado, db_del_grado, db_put_grado
+from .db import db_get_tipoextras_lista, db_get_tipoextra, db_del_tipoextra, db_put_tipoextra
+from .db import db_get_tipoeventos_lista, db_get_tipoevento, db_del_tipoevento, db_put_tipoevento
+
 from .notify import notify_component
 
 from rxconfig import config
@@ -45,15 +45,11 @@ class State(rx.State):
 	selected_doc: str = 'DNI'
 	selected_tipocursante: str
 
+	select_tipo_eventos: list
 
 #########
 
 	personas: list[tuple]
-	# estados: list
-	# casas: list
-	# grados: list
-	# docs: list
-
 
 	persona: tuple
 	persona_id: int
@@ -63,36 +59,33 @@ class State(rx.State):
 	extra_id: int
 	extra: tuple
 
-	# casas_lista: list[list]
-	# casa: tuple
-	# responsables: str
+	casas_lista: list[list]
+	sel_casa_str: str
+	sel_casa_tup: tuple
 
-	# gradox: list[list]
-	# grado: list
-	# grados_lista: list
+	tipoextras_lista: list[tuple]
+	sel_tipoextra_str: str
+	sel_tipoextra_tup: tuple
+	sel_tipoextra: str
 
+	tipoeventos_lista: list[tuple]
+	sel_tipoevento_str: str
+	sel_tipoevento_tup: tuple
+	sel_tipoevento: str
 
-	# alumnos: list[tuple]
+	eventos_lista: list[tuple]
+	sel_evento_str: str
+	sel_evento_tup: tuple
+	sel_evento: str
 
+	grados_lista: list[list]
+	sel_grado: str
 
+	sel_estado: str
 
+	sel_doc: str
 
-	# casas
-	# casap: tuple
-	# persona: tuple
-	# tipoestados: list
-	# tipoestado: str
-	# casaspr: list
-	# tipodocs: list
-	# tipodoc: str
-	# casa1: str
-	# extra: tuple
-	# casa_practica: str
-
-	@rx.event()
-	def cargar_tablas(self):
-		self.select_docs: db_get_docs()
-		self.select_tipocursantes: db_get_tipocursantes()
+	tipoeventos: list
 
 
 # handle's
@@ -134,25 +127,66 @@ class State(rx.State):
 		async with self:
 			self.selected_grado = value
 
-	# @rx.event(background=True)
-	# async def handle_casa_am(self, form_data: dict):
-	# 	async with self:
-	# 		self.form_data = form_data
-	# 		if (form_data['nombre'] and form_data['direccion']):
-	# 			db_put_casa(form_data['id'], form_data['nombre'], form_data['direccion'])
-	# 			self.casas_lista = db_get_casas_lista()
-	# 			self.opc = 'cas'
-	# 		else:
-	# 			self.error = 'Falta nombre o direccion'
-	# 	if (self.error != ''):
-	# 		await self.handle_notify()
+	@rx.event(background=True)
+	async def handle_casa_am(self, form_data: dict):
+		async with self:
+			self.form_data = form_data
+			if (form_data['nombre'] and form_data['direccion']):
+				db_put_casa(form_data['id'], form_data['nombre'], form_data['direccion'])
+				self.casas_lista = db_get_casas_lista()
+				self.opc = 'cas'
+			else:
+				self.error = 'Falta nombre o direccion'
+		if (self.error != ''):
+			await self.handle_notify()
+
+	@rx.event(background=True)
+	async def handle_tipoextra_am(self, form_data: dict):
+		async with self:
+			self.form_data = form_data
+			if (form_data['nombre'] and form_data['descripcion']):
+				db_put_tipoextra(form_data['id'], form_data['nombre'], form_data['descripcion'])
+				self.tipoextras_lista = db_get_tipoextras_lista()
+				self.opc = 'ext'
+			else:
+				self.error = 'Falta nombre o descripcion'
+		if (self.error != ''):
+			await self.handle_notify()
+
+	@rx.event(background=True)
+	async def handle_tipoevento_am(self, form_data: dict):
+		async with self:
+			self.form_data = form_data
+			if (form_data['nombre'] and form_data['descripcion']):
+				db_put_tipoevento(form_data['id'], form_data['nombre'], form_data['descripcion'])
+				self.tipoeventos_lista = db_get_tipoeventos_lista()
+				self.opc = 'tev'
+			else:
+				self.error = 'Falta nombre o descripcion'
+		if (self.error != ''):
+			await self.handle_notify()
+
+
+	@rx.event(background=True)
+	async def handle_evento_am(self, form_data: dict):
+		async with self:
+			if (form_data['nombre'] and form_data['descripcion']):
+				db_put_evento(form_data['id'], form_data['nombre'], form_data['descripcion'])
+				self.eventos_lista = db_get_eventos_lista()
+				self.opc = 'eve'
+			else:
+				self.error = 'Falta nombre o descripcion'
+		if (self.error != ''):
+			await self.handle_notify()
+
+
 
 	@rx.event(background=True)
 	async def handle_persona_am(self, form_data: dict):
 		async with self:
 			form_persona = form_data
 			persona = db_put_persona(form_data)
-			self.personas = db_get_personas_lista('', self.selected_estado, self.selected_casa, self.selectedgrado)
+			self.personas = db_get_personas_lista('', self.selected_estado, self.selected_casa, self.selected_grado)
 			self.opc = 'per'
 		if (self.error != ''):
 			await self.handle_notify()
@@ -180,41 +214,25 @@ class State(rx.State):
 		if (self.error != ''):
 			await self.handle_notify()
 
-# 	@rx.event()
-# 	def evt_tipoestado(self, value: str):
-# 		self.tipoestado = value
-
-# 	@rx.event()
-# 	def evt_grado(self, value: str):
-# 		self.grado = value
-
-
 # eventos casas
-	# @rx.event(background=True)
-	# async def evt_casas_lista(self):
-	# 	async with self:
-	# 		self.casas_lista = db_get_casas_lista()
-	# 		self.opc = "cas"
+	@rx.event(background=True)
+	async def evt_casas_lista(self):
+		async with self:
+			self.casas_lista = db_get_casas_lista()
+			self.opc = 'cas'
 
-	# @rx.event(background=True)
-	# async def evt_casa_am(self, id):
-	# 	async with self:
-	# 		self.casa = db_get_casa(id)
-	# 		self.opc = "cam"
+	@rx.event(background=True)
+	async def evt_casa_am(self, id):
+		async with self:
+			self.sel_casa_tup = db_get_casa(id)
+			self.opc = "cam"
 
-	# @rx.event(background=True)
-	# async def evt_del_casa(self, casa_id):
-	# 	async with self:
-	# 		db_del_casa(casa_id)
-	# 		self.casas_lista = db_get_casas_lista()
-	# 		self.opc = "cas"
-
-	# @rx.event(background=True)
-	# async def evt_cg_alumnos(self, id):
-	# 	async with self:
-	# 		self.responsables, self.alumnos = db_get_cg_alumnos(id, 0)
-	# 		self.opc = "cg"
-
+	@rx.event(background=True)
+	async def evt_del_casa(self, casa_id):
+		async with self:
+			db_del_casa(casa_id)
+			self.casas_lista = db_get_casas_lista()
+			self.opc = 'cas'
 
 # eventos persona
 	@rx.event(background=True)
@@ -237,10 +255,10 @@ class State(rx.State):
 			self.select_grados = db_get_grados()
 			self.select_casas = db_get_casas()
 			self.select_docs = db_get_docs()
-			self.selected_estado = self.persona[1]
-			self.selected_grado = self.persona[6]
-			self.selected_casa = self.persona[7]
-			self.selected_doc = self.persona[17]
+			self.sel_estado = self.persona[1]
+			self.sel_grado = self.persona[6]
+			self.sel_casa_str = self.persona[7] if self.persona[7] else ''
+			self.sel_doc = self.persona[17]
 			self.opc = "pam"
 
 	@rx.event(background=True)
@@ -274,36 +292,157 @@ class State(rx.State):
 			self.opc = 'pdxam'
 
 # eventos grados
-	# @rx.event(background=True)
-	# async def evt_grados_lista(self):
-	# 	async with self:
-	# 		self.gradox = db_get_grados_lista()
-	# 		self.opc = "gra"
+	@rx.event(background=True)
+	async def evt_grados_lista(self):
+		async with self:
+			self.grados_lista = db_get_grados_lista()
+			self.opc = 'gra'
+	
+	@rx.event(background=True)
+	async def evt_grado_am(self, id):
+		async with self:
+			self.sel_grado = db_get_grado(id)
+			self.opc = 'gam'
 
-	# @rx.event(background=True)
-	# async def evt_grado_detalle(self, grado_id):
-	# 	async with self:
-	# 		self.responsables, self.alumnos = db_get_cg_alumnos(0, grado_id)
-	# 		self.opc = "cg"
-			
-	# @rx.event(background=True)
-	# async def evt_grado_am(self, id):
-	# 	async with self:
-	# 		self.grado = db_get_grado(id)
-	# 		self.opc = "gam"
+	@rx.event(background=True)
+	async def handle_grado_am(self, form_data: dict):
+		async with self:
+			if (form_data['nombre']):
+				db_put_grado(form_data['id'], form_data['nombre'])
+				self.grados_lista = db_get_grados_lista()
+				self.opc = 'gra'
+			else:
+				self.error = 'Falta nombre'
+		if (self.error != ''):
+			await self.handle_notify()
 
-	# @rx.event(background=True)
-	# async def handle_grado_am(self, form_data: dict):
-	# 	async with self:
-	# 		self.form_data = form_data
-	# 		if (form_data['nombre']):
-	# 			db_put_grado(form_data['id'], form_data['nombre'])
-	# 			self.grados_lista = db_get_grados_lista()
-	# 			self.opc = 'gra'
-	# 		else:
-	# 			self.error = 'Falta nombre'
-	# 	if (self.error != ''):
-	# 		await self.handle_notify()
+	@rx.event(background=True)
+	async def evt_del_grado(self, grado_id):
+		async with self:
+			db_del_grado(grado_id)
+			self.grados_lista = db_get_grados_lista()
+			self.opc = 'gra'
+
+
+# eventos tipoextras
+	@rx.event(background=True)
+	async def evt_tipoextras_lista(self):
+		async with self:
+			self.tipoextras_lista = db_get_tipoextras_lista()
+			self.opc = 'ext'
+
+	@rx.event(background=True)
+	async def evt_tipoextra_am(self, id):
+		async with self:
+			self.sel_tipoextra_tup = db_get_tipoextra(id)
+			self.opc = 'exm'
+
+	@rx.event(background=True)
+	async def evt_del_tipoextra(self, extra_id):
+		async with self:
+			db_del_tipoextra(extra_id)
+			self.tipoextras_lista = db_get_tipoextras_lista()
+			self.opc = 'ext'
+
+# eventos eventos
+	@rx.event(background=True)
+	async def evt_eventos_lista(self):
+		async with self:
+			self.eventos_lista = db_get_eventos_lista()
+			self.opc = 'eve'
+
+	@rx.event(background=True)
+	async def evt_evento_am(self, id):
+		async with self:
+			self.sel_evento_tup = db_get_evento(id)
+			self.opc = 'evm'
+
+	@rx.event(background=True)
+	async def evt_del_evento(self, evento_id):
+		async with self:
+			db_del_evento(evento_id)
+			self.eventos_lista = db_get_eventos_lista()
+			self.opc = 'eve'
+
+
+# eventos tipoeventos
+	@rx.event(background=True)
+	async def evt_tipoeventos_lista(self):
+		async with self:
+			self.tipoeventos_lista = db_get_tipoeventos_lista()
+			self.opc = 'tev'
+
+	@rx.event(background=True)
+	async def evt_tipoevento_am(self, id):
+		async with self:
+			self.sel_tipoevento_tup = db_get_tipoevento(id)
+			self.opc = 'tem'
+
+	@rx.event(background=True)
+	async def evt_del_tipoevento(self, tipoevento_id):
+		async with self:
+			db_del_tipoevento(tipoevento_id)
+			self.tipoeventos_lista = db_get_tipoeventos_lista()
+			self.opc = 'tev'
+
+
+# eventos persona
+	@rx.event(background=True)
+	async def evt_personas(self):
+		async with self:
+			self.select_casas_total = db_get_casas('T')
+			self.select_estados_total = db_get_estados('T')
+			self.select_grados_total = db_get_grados('T')
+			self.selected_estado = 'Activo'
+			self.selected_casa = 'Todas'
+			self.selected_grado = 'Todos'
+			self.personas = db_get_personas_lista('', self.selected_estado, self.selected_casa, self.selected_grado)
+			self.opc = "per"
+
+	@rx.event(background=True)
+	async def evt_persona_am(self, id):
+		async with self:
+			self.persona = db_get_persona(int(id))
+			self.select_estados = db_get_estados()
+			self.select_grados = db_get_grados()
+			self.select_casas = db_get_casas()
+			self.select_docs = db_get_docs()
+			self.sel_estado = self.persona[1]
+			self.sel_grado = self.persona[6]
+			self.sel_casa_str = self.persona[7] if self.persona[7] else ''
+			self.sel_doc = self.persona[17]
+			self.opc = "pam"
+
+	@rx.event(background=True)
+	async def evt_persona_detalle_extra_delete(self, persona_id, extra_id):
+		async with self:
+			db_persona_detalle_extra_delete(persona_id, extra_id)
+			self.persona = db_get_persona(persona_id)
+			self.caps = db_get_persona_caps(persona_id)
+			self.extras = db_get_persona_extras(persona_id)
+			self.tipoextras = db_get_tipoextras()
+			self.opc = 'pde'
+
+	@rx.event(background=True)
+	async def evt_persona_detalle(self, id):
+		async with self:
+			self.persona = db_get_persona(id)
+			self.caps = db_get_persona_caps(id)
+			self.extras = db_get_persona_extras(id)
+			self.tipoextras = db_get_tipoextras()
+			self.opc = 'pde'
+
+	@rx.event(background=True)
+	async def evt_persona_detalle_extras_am(self, ids: list):
+		async with self:
+			self.persona_id, self.extra_id = ids
+			if (self.extra_id > 0):
+				self.extra = db_get_persona_detalle_extra(self.extra_id)
+				self.opc = 'pde'
+			else:
+				self.extra = ()
+			self.opc = 'pdxam'
+
 
 # eventos varios
 	@rx.event(background=True)
@@ -338,17 +477,26 @@ def index() -> rx.Component:
 					State.opc,
 					('img', fnc_imagen()),
 
-					# ('cas', fnc_casas_lista(State.casas_lista)),
-					# ('cam', fnc_casa_am(State.casa)),
-					# ('cg', fnc_cg_alumnos(State.responsables, State.alumnos)),
+					('cas', fnc_casas_lista(State.casas_lista)),
+					('cam', fnc_casa_am(State.sel_casa_tup)),
 
 					('per', fnc_personas(State.personas, State.select_estados_total, State.select_casas_total, State.select_grados_total)),
 					('pam', fnc_persona_am(State.persona, State.select_estados, State.select_casas, State.select_docs)),
 					('pde', fnc_persona_detalle(State.persona, State.caps, State.extras)),
 					('pdxam', fnc_persona_detalle_extra_am(State.persona_id, State.extra_id, State.extra, State.tipoextras)),
 
-					# ('gra', fnc_grados_lista(State.gradox)),
-					# ('gam', fnc_grado_am(State.grado)),
+					('gra', fnc_grados_lista(State.grados_lista)),
+					('gam', fnc_grado_am(State.sel_grado)),
+
+					('ext', fnc_tipoextras_lista(State.tipoextras_lista)),
+					('exm', fnc_tipoextra_am(State.sel_tipoextra_tup)),
+
+					('tev', fnc_tipoeventos_lista(State.tipoeventos_lista)),
+					('tem', fnc_tipoevento_am(State.sel_tipoevento_tup)),
+
+					('eve', fnc_eventos_lista(State.eventos_lista)),
+					('evm', fnc_evento_am(State.sel_evento_tup)),
+
 				),
 				spacing="5",
 				justify_x="center",
@@ -364,6 +512,7 @@ def index() -> rx.Component:
 	)
 
 #################
+
 def fnc_adentro(nombre) -> rx.Component:
 	return rx.box(
 		rx.hstack(
@@ -374,232 +523,379 @@ def fnc_adentro(nombre) -> rx.Component:
 
 ################# Casas
 
-# def fnc_casa_row(casa: list) -> rx.Component:
-# 	return rx.table.row(
-# 		rx.table.cell(casa[1], vertical_align='middle'),
-# 		rx.table.cell(casa[2], vertical_align='middle'),
-# 		rx.table.cell(casa[3], vertical_align='middle'),
-# 		rx.table.cell(casa[4], vertical_align='middle'),
-# 		rx.table.cell(
-# 			rx.hstack(
-# 				rx.button(rx.icon('pencil'), on_click=State.evt_casa_am(casa[0])),
-# 				rx.button(rx.icon('users'), on_click=State.evt_cg_alumnos(casa[0])),
-# 				fnc_del_confirmation(casa[0], State.evt_del_casa),
-# 			)
-# 		)
-# 	)
+def fnc_casa_row(casa: list) -> rx.Component:
+	return rx.table.row(
+		rx.table.cell(casa[1], vertical_align='middle'),
+		rx.table.cell(casa[2], vertical_align='middle'),
+		rx.table.cell(casa[3], vertical_align='middle'),
+		rx.table.cell(casa[4], vertical_align='middle'),
+		rx.table.cell(
+			rx.hstack(
+				rx.button(rx.icon('pencil'), on_click=State.evt_casa_am(casa[0])),
+				fnc_del_confirmation(casa[0], State.evt_del_casa),
+			)
+		)
+	)
 
-# def fnc_casas_lista(casas_lista) -> rx.Component:
-# 	return rx.box(
-# 		rx.card(
-# 			rx.heading('CASAS', align='center'),
-# 			rx.heading(
-# 				rx.button(rx.icon('plus'), 'CASA'), 
-# 				align='right', 
-# 				on_click=State.evt_casa_am(0)
-# 			),
-# 		),
-# 		rx.card(
-# 			rx.table.root(
-# 				rx.table.row(
-# 					rx.table.column_header_cell('Nombre'),
-# 					rx.table.column_header_cell('Direccion'),
-# 					rx.table.column_header_cell('Responsable'),
-# 					rx.table.column_header_cell('Alumnos (A/N/F)'),
-# 					rx.table.column_header_cell('Acciones'),
-# 				),
-# 				rx.table.body(
-# 					rx.foreach(casas_lista, fnc_casa_row),
-# 				),
-# 			),
-# 		)
-# 	)
+def fnc_casas_lista(casas_lista) -> rx.Component:
+	return rx.box(
+		rx.card(
+			rx.heading('CASAS', align='center'),
+			rx.heading(
+				rx.button(rx.icon('plus'), 'CASA'), 
+				align='right', 
+				on_click=State.evt_casa_am(0)
+			),
+		),
+		rx.card(
+			rx.table.root(
+				rx.table.row(
+					rx.table.column_header_cell('Nombre', width='20%'),
+					rx.table.column_header_cell('Direccion', width='20%'),
+					rx.table.column_header_cell('Responsable', width='30%'),
+					rx.table.column_header_cell('Alumnos (A/N/F)', width='10%'),
+					rx.table.column_header_cell('Acciones', width='10%'),
+				),
+				rx.table.body(
+					rx.foreach(casas_lista, fnc_casa_row),
+				),
+			),
+		)
+	)
 
-# def fnc_casa_am(casa) -> rx.Component:
-# 	return rx.center(
-# 		rx.box(
-# 			rx.card(
-# 				rx.cond(
-# 					casa[0] == 0,
-# 					rx.text('NUEVA CASA', weight="bold", align='center'),
-# 					rx.text('MODIFICACION CASA', weight="bold", align='center')
-# 				),
-# 			),
-# 			rx.card(
-# 				rx.form(
-# 					rx.vstack(
-# 						rx.input(value=casa[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
-# 						rx.hstack(
-# 							rx.text('Nombre: '),
-# 							rx.input(type='text', default_value=casa[1], name='nombre', style={'width':'200px'}),
-# 						),
-# 						rx.hstack(
-# 							rx.text('Dirección: '),
-# 							rx.input(type='text', default_value=casa[2], name='direccion', style={'width':'200px'}),
-# 						),
-# 						rx.button('Confirmar', type='submit', style={'width':'100%'})
-# 					),
-# 					on_submit=State.handle_casa_am,
-# 					reset_on_submit=True,
-# 				)
-# 			)
-# 		),
-# 		width='100%',
-# 		margin_y='2vw'
-# 	)
-
-# def fnc_cg_alumno(alumno) -> rx.Component:
-# 	return rx.table.row(
-# 		rx.table.cell(alumno[1], vertical_align='middle'),
-# 		rx.table.cell(rx.image(alumno[2], width='100%', high='auto')),
-# 		rx.table.cell(alumno[3], vertical_align='middle'),
-# 		rx.table.cell(alumno[4], vertical_align='middle'),
-# 		rx.table.cell(alumno[5], vertical_align='middle'),
-# 		rx.table.cell(
-# 			rx.hstack(
-# 				rx.button(rx.icon('pencil')), #, on_click=State.evt_casa_am(casa[0])),
-# 				rx.button(rx.icon('notebook-text'), on_click=State.evt_persona_detalles(alumno[0])),
-# 			)
-# 		),
-# 		width='100%',
-# 	)
-
-# def fnc_cg_alumnos(responsables, alumnos) -> rx.Component:
-# 	return rx.box(
-# 		rx.cond(
-# 			responsables,
-# 			rx.card(rx.text('RESPONSABLE(S) ', responsables, size='5', align='center')),
-# 		),
-# 		rx.card(
-# 			rx.text('ALUMNOS', align='left'),
-# 			rx.table.root(
-# 				rx.table.row(
-# 					rx.table.column_header_cell('Orden', width='10%'),
-# 					rx.table.column_header_cell('Foto', width='10%'),
-# 					rx.table.column_header_cell('Apellido y Nombre', width='40%'),
-# 					rx.table.column_header_cell('Grado', width='20%'),
-# 					rx.table.column_header_cell('Casa de Practica', width='20%'),
-# 					rx.table.column_header_cell('Acciones', width='10%'),
-# 				),
-# 				rx.table.body(
-# 					rx.foreach(alumnos, fnc_cg_alumno),
-# 				),
-# 			),
-# 		)
-# 	)
-
-
+def fnc_casa_am(casa) -> rx.Component:
+	return rx.center(
+		rx.box(
+			rx.card(
+				rx.cond(
+					casa[0] == 0,
+					rx.text('NUEVA CASA', weight="bold", align='center'),
+					rx.text('MODIFICACION CASA', weight="bold", align='center')
+				),
+			),
+			rx.card(
+				rx.form(
+					rx.vstack(
+						rx.input(value=casa[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
+						rx.hstack(
+							rx.text('Nombre: '),
+							rx.input(type='text', default_value=casa[1], name='nombre', style={'width':'200px'}),
+						),
+						rx.hstack(
+							rx.text('Dirección: '),
+							rx.input(type='text', default_value=casa[2], name='direccion', style={'width':'200px'}),
+						),
+						rx.button('Confirmar', type='submit', style={'width':'100%'})
+					),
+					on_submit=State.handle_casa_am,
+					reset_on_submit=True,
+				)
+			)
+		),
+		width='100%',
+		margin_y='2vw'
+	)
 
 ################# Grados
-# def fnc_grado(grado: list) -> rx.Component:
-# 	return rx.table.row(
-# 		rx.table.cell(grado[1]),
-# 		rx.table.cell(grado[2]),
-# 		rx.table.cell(grado[3]),
-# 		rx.table.cell(
-# 			rx.hstack(
-# 				rx.button(rx.icon('pencil'), on_click=State.evt_grado_am(grado[0])),
-# 				rx.button(rx.icon('users'), on_click=State.evt_grado_detalle(grado[0])),
-# 			)
-# 		)
-# 	)
 
-# def fnc_grados_lista(grados) -> rx.Component:
-# 	return rx.box(
-# 			rx.card(
-# 				rx.heading('GRADOS', align='center'),
-# 				rx.text(
-# 					rx.button(rx.icon('plus'), 'GRADOS'), 
-# 					align='right', 
-# 					on_click=State.evt_grado_am(0)
-# 				),
-# 			),
-# 				rx.card(
+def fnc_grado(grado: list) -> rx.Component:
+	return rx.table.row(
+		rx.table.cell(grado[1]),
+		rx.table.cell(grado[2]),
+		rx.table.cell(grado[3]),
+		rx.table.cell(
+			rx.hstack(
+				rx.button(rx.icon('pencil'), on_click=State.evt_grado_am(grado[0])),
+				fnc_del_confirmation(grado[0], State.evt_del_grado),
+			)
+		)
+	)
 
-# 		rx.table.root(
-# 			rx.table.row(
-# 				rx.table.column_header_cell('Nombre', width='50%'),
-# 				rx.table.column_header_cell('Activos', width='15%'),
-# 				rx.table.column_header_cell('No Activos', width='15%'),
-# 				rx.table.column_header_cell('Acciones', width='10%'),
-# 			),
-# 			rx.table.body(
-# 				rx.foreach(grados, fnc_grado),
-# 			),
-# 		),
-# 		),
-# 		width='100%'
-# 	)
+def fnc_grados_lista(grados) -> rx.Component:
+	return rx.box(
+			rx.card(
+				rx.heading('GRADOS', align='center'),
+				rx.text(
+					rx.button(rx.icon('plus'), 'GRADOS'), 
+					align='right', 
+					on_click=State.evt_grado_am(0)
+				),
+			),
+				rx.card(
 
-# def fnc_grado_alumno(alumno) -> rx.Component:
-# 	return rx.table.row(
-# 		rx.table.cell(alumno[1]),
-# 		rx.table.cell(
-# 			rx.hstack(
-# 				rx.image(alumno[2], width='10%', high='auto'), 
-# 				alumno[3]
-# 			),
-# 		),
-# 		rx.table.cell(alumno[4]),
-# 		rx.table.cell(
-# 			rx.hstack(
-# 				rx.button(rx.icon('pencil')), #, on_click=State.evt_casa_am(casa[0])),
-# 				rx.button(rx.icon('users')) #, on_click=State.evt_casa_detalle(casa[0])),
-# 			)
-# 		),
-# 		width='100%'
-# 	)
+		rx.table.root(
+			rx.table.row(
+				rx.table.column_header_cell('Nombre', width='50%'),
+				rx.table.column_header_cell('Activos', width='15%'),
+				rx.table.column_header_cell('No Activos', width='15%'),
+				rx.table.column_header_cell('Acciones', width='10%'),
+			),
+			rx.table.body(
+				rx.foreach(grados, fnc_grado),
+			),
+		),
+		),
+		width='100%'
+	)
 
-# def fnc_grado_alumnos(grado, alumnos) -> rx.Component:
-# 	return rx.box(
-# 		rx.card(
-# 			rx.text('GRADO ', grado, size='6', align='center'),
-# 		),
-# 		rx.card(
-# 			rx.text('ALUMNOS', align='left'),
-# 			rx.table.root(
-# 				rx.table.row(
-# 					rx.table.column_header_cell('Orden', width='10%'),
-# 					rx.table.column_header_cell('Apellido y Nombre', width='50%'),
-# 					rx.table.column_header_cell('Casa de Practica', width='30%'),
-# 					rx.table.column_header_cell('Acciones', width='10%'),
-# 				),
-# 				rx.table.body(
-# 					rx.foreach(alumnos, fnc_grado_alumno),
-# 				),
-# 			),
-# 		)
-# 	)
+def fnc_grado_am(grado) -> rx.Component:
+	return rx.center(
+		rx.box(
+			rx.card(
+				rx.cond(
+					grado[0] == 0,
+					rx.text('NUEVO GRADO', weight="bold", align='center'),
+					rx.text('MODIFICACION GRADO', weight="bold", align='center')
+				),
+			),
+			rx.card(
+				rx.form(
+					rx.vstack(
+						rx.input(value=grado[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
+						rx.hstack(
+							rx.text('Nombre: '),
+							rx.input(type='text', default_value=grado[1], name='nombre', style={'width':'200px'}),
+						),
+						rx.button('Confirmar', type='submit', style={'width':'100%'})
+					),
+					on_submit=State.handle_grado_am,
+					reset_on_submit=True,
+				)
+			)
+		),
+		width='100%',
+		margin_y='2vw'
+	)
 
-# def fnc_grado_am(grado) -> rx.Component:
-# 	return rx.center(
-# 		rx.box(
-# 			rx.card(
-# 				rx.cond(
-# 					grado[0] == 0,
-# 					rx.text('NUEVO GRADO', weight="bold", align='center'),
-# 					rx.text('MODIFICACION GRADO', weight="bold", align='center')
-# 				),
-# 			),
-# 			rx.card(
-# 				rx.form(
-# 					rx.vstack(
-# 						rx.input(value=grado[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
-# 						rx.hstack(
-# 							rx.text('Nombre: '),
-# 							rx.input(type='text', default_value=grado[1], name='nombre', style={'width':'200px'}),
-# 						),
-# 						rx.button('Confirmar', type='submit', style={'width':'100%'})
-# 					),
-# 					on_submit=State.handle_grado_am,
-# 					reset_on_submit=True,
-# 				)
-# 			)
-# 		),
-# 		width='100%',
-# 		margin_y='2vw'
-# 	)
+################# Eventos
 
+def fnc_evento(evento: list) -> rx.Component:
+	return rx.table.row(
+		rx.table.cell(evento[1]),
+		rx.table.cell(evento[2]),
+		rx.table.cell(evento[3]),
+		rx.table.cell(
+			rx.hstack(
+				rx.button(rx.icon('pencil'), on_click=State.evt_evento_am(evento[0])),
+				fnc_del_confirmation(evento[0], State.evt_del_evento),
+			)
+		)
+	)
+
+def fnc_eventos_lista(eventos) -> rx.Component:
+	return rx.box(
+			rx.card(
+				rx.heading('EVENTOS', align='center'),
+				rx.text(
+					rx.button(rx.icon('plus'), 'EVENTO'), 
+					align='right', 
+					on_click=State.evt_evento_am(0)
+				),
+			),
+				rx.card(
+
+		rx.table.root(
+			rx.table.row(
+				rx.table.column_header_cell('Tipo', width='20%'),
+				rx.table.column_header_cell('Nombre', width='20%'),
+				rx.table.column_header_cell('Descripcion', width='50%'),
+				rx.table.column_header_cell('Acciones', width='10%'),
+			),
+			rx.table.body(
+				rx.foreach(eventos, fnc_evento),
+			),
+		),
+		),
+		width='100%'
+	)
+
+def fnc_evento_am(evento) -> rx.Component:
+	return rx.center(
+		rx.box(
+			rx.card(
+				rx.cond(
+					evento[0] == 0,
+					rx.text('NUEVO EVENTO', weight="bold", align='center'),
+					rx.text('MODIFICACION EVENTO', weight="bold", align='center')
+				),
+			),
+			rx.card(
+				rx.form(
+					rx.vstack(
+						rx.input(value=evento[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
+						rx.hstack(
+							rx.text('Tipo de Evento: '),
+							# rx.select(State.tipoeventos_lista, default_value=evento[1], value=evento[1], name='tipoevento'),
+						),
+						rx.hstack(
+							rx.text('Nombre: '),
+							rx.input(type='text', default_value=evento[2], name='nombre', style={'width':'200px'}),
+						),
+						rx.hstack(
+							rx.text('Descripcion: '),
+							rx.input(type='text', default_value=evento[3], name='descripcion', style={'width':'200px'}),
+						),
+						rx.button('Confirmar', type='submit', style={'width':'100%'})
+					),
+					on_submit=State.handle_evento_am,
+					reset_on_submit=True,
+				)
+			)
+		),
+		width='100%',
+		margin_y='2vw'
+	)
+
+
+
+
+################# Tipo Extras
+
+def fnc_tipoextra(tipoextra: list) -> rx.Component:
+	return rx.table.row(
+		rx.table.cell(tipoextra[1]),
+		rx.table.cell(tipoextra[2]),
+		rx.table.cell(tipoextra[3]),
+		rx.table.cell(
+			rx.hstack(
+				rx.button(rx.icon('pencil'), on_click=State.evt_tipoextra_am(tipoextra[0])),
+				fnc_del_confirmation(tipoextra[0], State.evt_del_tipoextra),
+			)
+		)
+	)
+
+def fnc_tipoextras_lista(tipoextras) -> rx.Component:
+	return rx.box(
+			rx.card(
+				rx.heading('EXTRAS', align='center'),
+				rx.text(
+					rx.button(rx.icon('plus'), 'EXTRAS'), 
+					align='right', 
+					on_click=State.evt_tipoextra_am(0)
+				),
+			),
+				rx.card(
+
+		rx.table.root(
+			rx.table.row(
+				rx.table.column_header_cell('Nombre', width='40%'),
+				rx.table.column_header_cell('Descripcion', width='50%'),
+				rx.table.column_header_cell('Acciones', width='10%'),
+			),
+			rx.table.body(
+				rx.foreach(tipoextras, fnc_tipoextra),
+			),
+		),
+		),
+		width='100%'
+	)
+
+def fnc_tipoextra_am(tipoextra) -> rx.Component:
+	return rx.center(
+		rx.box(
+			rx.card(
+				rx.cond(
+					tipoextra[0] == 0,
+					rx.text('NUEVO EXTRA', weight="bold", align='center'),
+					rx.text('MODIFICACION EXTRA', weight="bold", align='center')
+				),
+			),
+			rx.card(
+				rx.form(
+					rx.vstack(
+						rx.input(value=tipoextra[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
+						rx.hstack(
+							rx.text('Nombre: '),
+							rx.input(type='text', default_value=tipoextra[1], name='nombre', style={'width':'200px'}),
+						),
+						rx.hstack(
+							rx.text('Descripcion: '),
+							rx.input(type='text', default_value=tipoextra[2], name='descripcion', style={'width':'200px'}),
+						),
+						rx.button('Confirmar', type='submit', style={'width':'100%'})
+					),
+					on_submit=State.handle_tipoextra_am,
+					reset_on_submit=True,
+				)
+			)
+		),
+		width='100%',
+		margin_y='2vw'
+	)
+
+################# Tipo Eventos
+
+def fnc_tipoevento(tipoevento: list) -> rx.Component:
+	return rx.table.row(
+		rx.table.cell(tipoevento[1]),
+		rx.table.cell(tipoevento[2]),
+		rx.table.cell(tipoevento[3]),
+		rx.table.cell(
+			rx.hstack(
+				rx.button(rx.icon('pencil'), on_click=State.evt_tipoevento_am(tipoevento[0])),
+				fnc_del_confirmation(tipoevento[0], State.evt_del_tipoevento),
+			)
+		)
+	)
+
+def fnc_tipoeventos_lista(tipoeventos) -> rx.Component:
+	return rx.box(
+			rx.card(
+				rx.heading('TIPO EVENTOS', align='center'),
+				rx.text(
+					rx.button(rx.icon('plus'), 'TIPO EVENTO'), 
+					align='right', 
+					on_click=State.evt_tipoevento_am(0)
+				),
+			),
+				rx.card(
+
+		rx.table.root(
+			rx.table.row(
+				rx.table.column_header_cell('Nombre', width='40%'),
+				rx.table.column_header_cell('Descripcion', width='50%'),
+				rx.table.column_header_cell('Acciones', width='10%'),
+			),
+			rx.table.body(
+				rx.foreach(tipoeventos, fnc_tipoevento),
+			),
+		),
+		),
+		width='100%'
+	)
+
+def fnc_tipoevento_am(tipoevento) -> rx.Component:
+	return rx.center(
+		rx.box(
+			rx.card(
+				rx.cond(
+					tipoevento[0] == 0,
+					rx.text('NUEVO TIPO EVENTO', weight="bold", align='center'),
+					rx.text('MODIFICACION TIPO EVENTO', weight="bold", align='center')
+				),
+			),
+			rx.card(
+				rx.form(
+					rx.vstack(
+						rx.input(value=tipoevento[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
+						rx.hstack(
+							rx.text('Nombre: '),
+							rx.input(type='text', default_value=tipoevento[1], name='nombre', style={'width':'200px'}),
+						),
+						rx.hstack(
+							rx.text('Descripcion: '),
+							rx.input(type='text', default_value=tipoevento[2], name='descripcion', style={'width':'200px'}),
+						),
+						rx.button('Confirmar', type='submit', style={'width':'100%'})
+					),
+					on_submit=State.handle_tipoevento_am,
+					reset_on_submit=True,
+				)
+			)
+		),
+		width='100%',
+		margin_y='2vw'
+	)
 
 ################# Personas
 
@@ -671,7 +967,11 @@ def fnc_persona_am(persona: list, estados, casas, docs) -> rx.Component:
 							rx.table.cell(
 								rx.hstack(
 									rx.text('*Casa de Practica: '),
-									rx.select(casas, default_value=persona[7], name='casapractica', required=True), 
+									rx.cond(
+										persona[7],
+										rx.select(casas, default_value=persona[7], name='casapractica', required=True), 
+										rx.select(casas, default_value=None, name='casapractica', required=True), 
+									),
 								),
 							),
 							rx.table.cell(
@@ -1092,9 +1392,8 @@ def fnc_persona_detalle(persona: list, caps: list, extras: list) -> rx.Component
 	)
 
 
-
-
 ################## Varios
+
 def fnc_imagen() -> rx.Component:
 	frase, detalle = db_get_frase()
 	return rx.box(
@@ -1128,11 +1427,11 @@ def fnc_menu() -> rx.Component:
 			rx.hstack(
 				rx.button(rx.icon('users-round'), 'Personas', on_click=State.evt_personas()),
 				rx.button(rx.icon('calendar-days'), 'Agenda'),
-				rx.button(rx.icon('ticket'), 'Eventos'),
-				rx.button(rx.icon('house'), 'Casas'), #, on_click=State.evt_casas_lista()),
-				rx.button(rx.icon('graduation-cap'), 'Grados'), #, on_click=State.evt_grados_lista()),
-				rx.button(rx.icon('list'), 'Tipo Eventos'),
-				rx.button(rx.icon('list'), 'Extras'),
+				rx.button(rx.icon('ticket'), 'Eventos', on_click=State.evt_eventos_lista()),
+				rx.button(rx.icon('house'), 'Casas', on_click=State.evt_casas_lista()),
+				rx.button(rx.icon('graduation-cap'), 'Grados', on_click=State.evt_grados_lista()),
+				rx.button(rx.icon('list'), 'Tipo Eventos', on_click=State.evt_tipoeventos_lista()),
+				rx.button(rx.icon('list'), 'Extras', on_click=State.evt_tipoextras_lista()),
 			),
 		),
 		width='100%',

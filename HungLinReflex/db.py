@@ -28,70 +28,53 @@ def db_get_usuario(usuario, clave):
 			return(persona)
 	return(persona)
 
+
 # casas
-# def db_get_casas_lista():
-# 	respuesta = []
-# 	q1 = f'SELECT * FROM bosquetaoista_casa ORDER BY id'
-# 	cursor.execute(q1)
-# 	casas = cursor.fetchall()
-# 	for casa in casas:
-# 		q1 = f'SELECT CONCAT(apellido, ", ", nombre) FROM bosquetaoista_persona WHERE responsable_casa_id = {casa[0]} ORDER BY orden'
-# 		cursor.execute(q1)
-# 		resps = cursor.fetchall()
-# 		responsables = ' // '.join([resp[0] for resp in resps])
-# 		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE casa_practica_id = {casa[0]} and estado_id = 1'
-# 		cursor.execute(q1)
-# 		activos = cursor.fetchone()[0]
-# 		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE casa_practica_id = {casa[0]} and estado_id = 2'
-# 		cursor.execute(q1)
-# 		noactivos = cursor.fetchone()[0]
-# 		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE casa_practica_id = {casa[0]} and estado_id = 3'
-# 		cursor.execute(q1)
-# 		fallecidos = cursor.fetchone()[0]
-# 		anf = ' / '.join([str(activos), str(noactivos), str(fallecidos)])
-# 		respuesta.append([casa[0], casa[1], casa[2], responsables, anf])
-# 	return(respuesta)
+def db_get_casas_lista():
+	respuesta = []
+	q1 = f'SELECT * FROM bosquetaoista_casa ORDER BY id'
+	cursor.execute(q1)
+	casas = cursor.fetchall()
+	for casa in casas:
+		q1 = f'SELECT CONCAT(apellido, ", ", nombre) FROM bosquetaoista_persona WHERE responsable_casa_id = {casa[0]} ORDER BY orden'
+		cursor.execute(q1)
+		resps = cursor.fetchall()
+		responsables = ' // '.join([resp[0] for resp in resps])
+		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE casa_practica_id = {casa[0]} and estado_id = 1'
+		cursor.execute(q1)
+		activos = cursor.fetchone()[0]
+		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE casa_practica_id = {casa[0]} and estado_id = 2'
+		cursor.execute(q1)
+		noactivos = cursor.fetchone()[0]
+		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE casa_practica_id = {casa[0]} and estado_id = 3'
+		cursor.execute(q1)
+		fallecidos = cursor.fetchone()[0]
+		anf = ' / '.join([str(activos), str(noactivos), str(fallecidos)])
+		respuesta.append([casa[0], casa[1], casa[2], responsables, anf])
+	return(respuesta)
 
-# def db_get_casa(id: int):
-# 	if (int(id) > 0):
-# 		q1 = f'SELECT * FROM bosquetaoista_casa WHERE id = {id}'
-# 		cursor.execute(q1)
-# 		casa = cursor.fetchone()
-# 	else:
-# 		casa = [0, None, None]
-# 	return(casa)
+def db_get_casa(id: int):
+	if (int(id) > 0):
+		q1 = f'SELECT * FROM bosquetaoista_casa WHERE id = {id}'
+		cursor.execute(q1)
+		casa = cursor.fetchone()
+	else:
+		casa = (0, None, None)
+	return(casa)
 
-# def db_put_casa(id: int, nombre: str, direccion: str):
-# 	if (int(id) != 0):
-# 		q1 =f'UPDATE bosquetaoista_casa SET nombre="{nombre}", direccion="{direccion}" WHERE id={id}'
-# 	else:
-# 		q1 = f'INSERT INTO bosquetaoista_casa VALUES (0, "{nombre}", "{direccion}")'
-# 	cursor.execute(q1)
-# 	conn.commit()
-# 	return
+def db_put_casa(id: int, nombre: str, direccion: str):
+	if (int(id) != 0):
+		q1 =f'UPDATE bosquetaoista_casa SET nombre="{nombre}", direccion="{direccion}" WHERE id={id}'
+	else:
+		q1 = f'INSERT INTO bosquetaoista_casa VALUES (0, "{nombre}", "{direccion}")'
+	cursor.execute(q1)
+	conn.commit()
+	return
 
-# def db_del_casa(casa_id):
-# 	q1 = f'DELETE FROM bosquetaoista_casa WHERE id = {casa_id}'
-# 	cursor.execute(q1)
-# 	conn.commit()
-
-# def db_get_cg_alumnos(casa_id: int, grado_id: int):
-# 	q1 = f'SELECT CONCAT(apellido, ", ", nombre) FROM bosquetaoista_persona WHERE estado_id = 1 AND responsable_casa_id = {casa_id}'
-# 	cursor.execute(q1)
-# 	resps = cursor.fetchall()
-# 	responsables = ' // '.join([resp[0] for resp in resps])
-# 	q1 = f'SELECT A.id, A.orden, CASE WHEN A.foto is NULL THEN "/bosquetaoista/nophoto.jpg" ELSE CONCAT("/", foto) END, CONCAT(A.apellido, ", ", A.nombre), B.nombre as casa, C.nombre as grado FROM bosquetaoista_persona A INNER JOIN bosquetaoista_grado B on B.id = A.grado_id INNER JOIN bosquetaoista_casa C ON C.id = a.casa_practica_id WHERE A.estado_id = 1 AND '
-# 	if (int(casa_id) > 0):
-# 		q1 += f' A.casa_practica_id = {casa_id}'
-# 	else:
-# 		q1 += f' A.grado_id = {grado_id}'
-# 	cursor.execute(q1)
-# 	alumnos = cursor.fetchall()
-# 	return(responsables, alumnos)
-
-
-
-
+def db_del_casa(casa_id):
+	q1 = f'DELETE FROM bosquetaoista_casa WHERE id = {casa_id}'
+	cursor.execute(q1)
+	conn.commit()
 
 
 # personas
@@ -142,7 +125,6 @@ def db_persona_detalle_extra_delete(persona_id, extra_id):
 	cursor.execute(q1)
 	conn.commit()
 
-
 def db_get_personas_lista(busq, estado, casa, grado):
 	q1 = 'SELECT A.id, A.orden, B.nombre as estado, CASE WHEN A.foto is NULL OR A.foto = "" THEN "/bosquetaoista/nophoto.jpg" ELSE foto END as foto, CONCAT(A.apellido, ", ", A.nombre), C.nombre as grado, D.nombre as casapractica FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id LEFT JOIN bosquetaoista_casa D on D.id = A.casa_practica_id WHERE '
 	if (len(busq)):
@@ -189,11 +171,12 @@ def db_put_persona(pers):
 				qupd += f', estado_id = {estado}'
 
 			case 'orden':
-				orden = pers['orden']
-				if (len(orden) == 0):
+				if (int(id) != 0):
+					orden = pers['orden']
+				else:
 					q1 = f'SELECT MAX(orden) from bosquetaoista_persona'
 					cursor.execute(q1)
-					orden = cursor.fetchone()[0]
+					orden = int(cursor.fetchone()[0]) + 1
 				qins += f', orden '
 				valores += f', {orden}'
 				qupd += f', orden = {orden}'
@@ -285,7 +268,7 @@ def db_put_persona(pers):
 					qupd += f', certificado = "{cert}"'
 
 			case _:
-				if (key in ['apellido', 'nombre', 'usuario', 'direccion', 'localidad', 'codigopostal', 'email', 'celular', 'nrodoc']):
+				if (key in ['apellido', 'nombre', 'usuario', 'direccion', 'localidad', 'codigopostal', 'email', 'celular', 'nrodoc', 'codigo_postal']):
 					qins += f', {key}'
 					valores += f', TRIM(\"{value}\")'
 					qupd += f', {key} = TRIM(\"{value}\")'
@@ -306,42 +289,142 @@ def db_put_persona(pers):
 	else:
 		cursor.execute(qupd)
 	conn.commit()
+
 	return
 
 
+# eventos
+def db_get_eventos_lista():
+	q1 = f'SELECT A.id, B.nombre, A.nombre, A.descripcion FROM hunglin.bosquetaoista_evento A INNER JOIN bosquetaoista_tipoevento B on B.id = A.tipo_id ORDER BY A.id'
+	cursor.execute(q1)
+	eventos = cursor.fetchall()
+	return(eventos)
+
+def db_get_evento(id: int):
+	if (int(id) > 0):
+		q1 = f'SELECT A.id, B.nombre, A.nombre, A.descripcion FROM hunglin.bosquetaoista_evento A INNER JOIN bosquetaoista_tipoevento B on B.id = A.tipo_id WHERE A.id =  {id}'
+		cursor.execute(q1)
+		evento = cursor.fetchone()
+	else:
+		evento = (0, None, None, None)
+	return(evento)
+
+def db_put_evento(id: int, nombre: str, descripcion: str):
+	if (int(id) != 0):
+		q1 =f'UPDATE bosquetaoista_evento SET nombre="{nombre}", descripcion="{descripcion}" WHERE id={id}'
+	else:
+		q1 = f'INSERT INTO bosquetaoista_evento VALUES (0, "{nombre}", "{descripcion}")'
+	cursor.execute(q1)
+	conn.commit()
+	return
+
+def db_del_evento(evento_id):
+	q1 = f'DELETE FROM bosquetaoista_evento WHERE id = {tipoextra_id}'
+	cursor.execute(q1)
+	conn.commit()
+
+
 # grados
-# def db_get_grados_lista():
-# 	q1 = f'SELECT * FROM bosquetaoista_grado ORDER BY id'
-# 	cursor.execute(q1)
-# 	grados = cursor.fetchall()
-# 	res = []
-# 	for grado in grados:
-# 		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE grado_id = {grado[0]} AND estado_id = 1'
-# 		cursor.execute(q1)
-# 		activos = cursor.fetchone()[0]
-# 		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE grado_id = {grado[0]} AND estado_id = 2'
-# 		cursor.execute(q1)
-# 		noactivos = cursor.fetchone()[0]
-# 		res.append([grado[0], grado[1], activos, noactivos])
-# 	return(res)
+def db_get_grados_lista():
+	q1 = f'SELECT * FROM bosquetaoista_grado ORDER BY id'
+	cursor.execute(q1)
+	grados = cursor.fetchall()
+	res = []
+	for grado in grados:
+		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE grado_id = {grado[0]} AND estado_id = 1'
+		cursor.execute(q1)
+		activos = cursor.fetchone()[0]
+		q1 = f'SELECT COUNT(*) FROM bosquetaoista_persona WHERE grado_id = {grado[0]} AND estado_id = 2'
+		cursor.execute(q1)
+		noactivos = cursor.fetchone()[0]
+		res.append([grado[0], grado[1], activos, noactivos])
+	return(res)
 
-# def db_get_grado(id):
-# 	if (int(id) > 0):
-# 		q1 = f'SELECT * FROM bosquetaoista_grado WHERE id = {id}'
-# 		cursor.execute(q1)
-# 		grado = cursor.fetchone()
-# 	else:
-# 		grado = [0, '']
-# 	return grado
+def db_get_grado(id):
+	if (int(id) > 0):
+		q1 = f'SELECT * FROM bosquetaoista_grado WHERE id = {id}'
+		cursor.execute(q1)
+		grado = cursor.fetchone()
+	else:
+		grado = [0, '']
+	return grado
 
-# def db_put_grado(id: int, nombre: str):
-# 	if (int(id) != 0):
-# 		q1 =f'UPDATE bosquetaoista_grado SET nombre="{nombre}" WHERE id={id}'
-# 	else:
-# 		q1 = f'INSERT INTO bosquetaoista_grado VALUES (0, "{nombre}")'
-# 	cursor.execute(q1)
-# 	conn.commit()
-# 	return
+def db_put_grado(id: int, nombre: str):
+	if (int(id) != 0):
+		q1 =f'UPDATE bosquetaoista_grado SET nombre="{nombre}" WHERE id={id}'
+	else:
+		q1 = f'INSERT INTO bosquetaoista_grado VALUES (0, "{nombre}")'
+	cursor.execute(q1)
+	conn.commit()
+	return
+
+def db_del_grado(grado_id):
+	q1 = f'DELETE FROM bosquetaoista_grado WHERE id = {grado_id}'
+	cursor.execute(q1)
+	conn.commit()
+
+
+# extras
+def db_get_tipoextras_lista():
+	q1 = f'SELECT * FROM bosquetaoista_tipoextra ORDER BY id'
+	cursor.execute(q1)
+	tipoextras = cursor.fetchall()
+	return(tipoextras)
+
+def db_get_tipoextra(id: int):
+	if (int(id) > 0):
+		q1 = f'SELECT * FROM bosquetaoista_tipoextra WHERE id = {id}'
+		cursor.execute(q1)
+		tipoextra = cursor.fetchone()
+	else:
+		tipoextra = (0, None, None)
+	return(tipoextra)
+
+def db_put_tipoextra(id: int, nombre: str, descripcion: str):
+	if (int(id) != 0):
+		q1 =f'UPDATE bosquetaoista_tipoextra SET nombre="{nombre}", descripcion="{descripcion}" WHERE id={id}'
+	else:
+		q1 = f'INSERT INTO bosquetaoista_tipoextra VALUES (0, "{nombre}", "{descripcion}")'
+	cursor.execute(q1)
+	conn.commit()
+	return
+
+def db_del_tipoextra(tipoextra_id):
+	q1 = f'DELETE FROM bosquetaoista_tipoextra WHERE id = {tipoextra_id}'
+	cursor.execute(q1)
+	conn.commit()
+
+
+# tipoeventos
+def db_get_tipoeventos_lista():
+	q1 = f'SELECT * FROM bosquetaoista_tipoevento ORDER BY id'
+	cursor.execute(q1)
+	tipoeventos = cursor.fetchall()
+	return(tipoeventos)
+
+def db_get_tipoevento(id: int):
+	if (int(id) > 0):
+		q1 = f'SELECT * FROM bosquetaoista_tipoevento WHERE id = {id}'
+		cursor.execute(q1)
+		tipoevento = cursor.fetchone()
+	else:
+		tipoevento = (0, None, None)
+	return(tipoevento)
+
+def db_put_tipoevento(id: int, nombre: str, descripcion: str):
+	if (int(id) != 0):
+		q1 =f'UPDATE bosquetaoista_tipoevento SET nombre="{nombre}", descripcion="{descripcion}" WHERE id={id}'
+	else:
+		q1 = f'INSERT INTO bosquetaoista_tipoevento VALUES (0, "{nombre}", "{descripcion}")'
+	cursor.execute(q1)
+	conn.commit()
+	return
+
+def db_del_tipoevento(evento_id):
+	q1 = f'DELETE FROM bosquetaoista_tipoevento WHERE id = {evento_id}'
+	cursor.execute(q1)
+	conn.commit()
+
 
 
 # misc
