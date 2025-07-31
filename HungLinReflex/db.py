@@ -36,7 +36,7 @@ def db_get_casas_lista():
 	cursor.execute(q1)
 	casas = cursor.fetchall()
 	for casa in casas:
-		q1 = f'SELECT CONCAT(apellido, ", ", nombre) FROM bosquetaoista_persona WHERE responsable_casa_id = {casa[0]} ORDER BY orden'
+		q1 = f'SELECT CONCAT(TRIM(apellido), ", ", TRIM(nombre)) FROM bosquetaoista_persona WHERE responsable_casa_id = {casa[0]} ORDER BY orden'
 		cursor.execute(q1)
 		resps = cursor.fetchall()
 		responsables = ' // '.join([resp[0] for resp in resps])
@@ -88,7 +88,7 @@ def db_get_persona(id):
 	return(persona)
 
 def db_get_persona_caps(id):
-	q1 = f' SELECT C.nombre, B.nombre, A.fecha, CONCAT(D.apellido, ", ", D.nombre),  F.nombre FROM bosquetaoista_agenda A INNER JOIN bosquetaoista_evento B ON B.id = A.evento_id INNER JOIN bosquetaoista_tipoevento C on C.id = B.tipo_id INNER JOIN bosquetaoista_persona D on D.id = A.orador_id INNER JOIN bosquetaoista_cursante E ON E.persona_id = {id} INNER JOIN bosquetaoista_tipocursante F ON F.id = E.tipocursante_id'
+	q1 = f' SELECT C.nombre, B.nombre, A.fecha, CONCAT(TRIM(D.apellido), ", ", TRIM(D.nombre)),  F.nombre FROM bosquetaoista_agenda A INNER JOIN bosquetaoista_evento B ON B.id = A.evento_id INNER JOIN bosquetaoista_tipoevento C on C.id = B.tipo_id INNER JOIN bosquetaoista_persona D on D.id = A.orador_id INNER JOIN bosquetaoista_cursante E ON E.persona_id = {id} INNER JOIN bosquetaoista_tipocursante F ON F.id = E.tipocursante_id'
 	cursor.execute(q1)
 	caps = cursor.fetchall()
 	return(caps)
@@ -126,7 +126,7 @@ def db_persona_detalle_extra_delete(persona_id, extra_id):
 	conn.commit()
 
 def db_get_personas_lista(busq, estado, casa, grado):
-	q1 = 'SELECT A.id, A.orden, B.nombre as estado, CASE WHEN A.foto is NULL OR A.foto = "" THEN "/bosquetaoista/nophoto.jpg" ELSE foto END as foto, CONCAT(A.apellido, ", ", A.nombre), C.nombre as grado, D.nombre as casapractica FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id LEFT JOIN bosquetaoista_casa D on D.id = A.casa_practica_id WHERE '
+	q1 = 'SELECT A.id, A.orden, B.nombre as estado, CASE WHEN A.foto is NULL OR A.foto = "" THEN "/bosquetaoista/nophoto.jpg" ELSE foto END as foto, CONCAT(TRIM(A.apellido), ", ", TRIM(A.nombre)), C.nombre as grado, D.nombre as casapractica FROM bosquetaoista_persona A INNER JOIN bosquetaoista_tipoestado B on B.id = A.estado_id INNER JOIN bosquetaoista_grado C on C.id = A.grado_id LEFT JOIN bosquetaoista_casa D on D.id = A.casa_practica_id WHERE '
 	if (len(busq)):
 		q1 += f' A.nombre LIKE "%{busq}%" OR A.apellido LIKE "%{busq}%" AND '
 	if (estado != 'Todos'):
@@ -293,7 +293,65 @@ def db_put_persona(pers):
 	return
 
 
+# agendas
+# def db_get_eve_lista():
+# 	q1 = f'SELECT nombre FROM bosquetaoista_tipoevento ORDER BY nombre'
+# 	cursor.execute(q1)
+# 	eves = cursor.fetchall()
+# 	return(eves)
+
+def db_get_agendas_lista():
+	q1 = f'SELECT A.evento_id, A.orador_id, B.nombre, A.fecha, CONCAT(TRIM(C.apellido), ", ", TRIM(C.nombre)) FROM bosquetaoista_agenda A INNER JOIN bosquetaoista_evento B ON B.id = A.evento_id INNER JOIN bosquetaoista_persona C ON C.id = A.orador_id ORDER BY A.fecha'
+	cursor.execute(q1)
+	eventos = cursor.fetchall()
+	return(eventos)
+
+def db_get_agenda(id: int):
+	if (int(id) > 0):
+		q1 = f'SELECT A.evento_id, B.nombre, A.fecha, CONCAT(TRIM(C.apellido), ", ", TRIM(C.nombre)) FROM bosquetaoista_agenda A INNER JOIN bosquetaoista_evento B ON B.id = A.evento_id INNER JOIN bosquetaoista_persona C ON C.id = A.orador_id WHERE A.id =  {id}'
+		cursor.execute(q1)
+		evento = cursor.fetchone()
+	else:
+		evento = (0, 0, None, None, None)
+	return(evento)
+
+def db_get_oradores():
+	q1 = 'SELECT CONCAT(TRIM(apellido), ", ", TRIM(nombre)) FROM bosquetaoista_persona WHERE estado_id = 1 ORDER BY apellido, nombre'
+	cursor.execute(q1)
+	oradores = [orador[0] for orador in cursor.fetchall()]
+	return(oradores)
+
+def db_put_agenda(id: int, nombre: str, descripcion: str):
+	if (int(id) != 0):
+		q1 =f'UPDATE bosquetaoista_evento SET nombre="{nombre}", descripcion="{descripcion}" WHERE id={id}'
+	else:
+		q1 = f'INSERT INTO bosquetaoista_evento VALUES (0, "{nombre}", "{descripcion}")'
+	# cursor.execute(q1)
+	# conn.commit()
+	return
+
+def db_del_agenda(agenda_id):
+	q1 = f'DELETE FROM bosquetaoista_evento WHERE id = {agenda_id}'
+	# cursor.execute(q1)
+	# conn.commit()
+	return
+
+
 # eventos
+def db_get_eve_lista():
+	q1 = f'SELECT nombre FROM bosquetaoista_tipoevento ORDER BY nombre'
+	cursor.execute(q1)
+	eves = [ev[0] for ev in cursor.fetchall()]
+	return(eves)
+
+def db_get_evt_lista():
+	q1 = f'SELECT nombre FROM bosquetaoista_evento ORDER BY nombre'
+	cursor.execute(q1)
+	evts = [ev[0] for ev in cursor.fetchall()]
+	return(evts)
+
+
+
 def db_get_eventos_lista():
 	q1 = f'SELECT A.id, B.nombre, A.nombre, A.descripcion FROM hunglin.bosquetaoista_evento A INNER JOIN bosquetaoista_tipoevento B on B.id = A.tipo_id ORDER BY A.id'
 	cursor.execute(q1)
@@ -397,7 +455,7 @@ def db_del_tipoextra(tipoextra_id):
 
 # tipoeventos
 def db_get_tipoeventos_lista():
-	q1 = f'SELECT * FROM bosquetaoista_tipoevento ORDER BY id'
+	q1 = f'SELECT nombre FROM bosquetaoista_tipoevento ORDER BY id'
 	cursor.execute(q1)
 	tipoeventos = cursor.fetchall()
 	return(tipoeventos)

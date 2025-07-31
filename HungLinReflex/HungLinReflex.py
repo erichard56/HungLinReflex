@@ -7,10 +7,11 @@ from .db import db_get_personas_lista, db_get_persona, db_get_persona_caps, db_g
 from .db import db_get_estados, db_get_casas, db_get_grados
 from .db import db_get_tipoextras, db_get_docs
 from .db import db_get_casas_lista, db_get_casa, db_put_casa, db_del_casa
-from .db import db_get_eventos_lista, db_get_evento, db_del_evento, db_put_evento
+from .db import db_get_eventos_lista, db_get_evento, db_del_evento, db_put_evento, db_get_eve_lista, db_get_evt_lista
 from .db import db_get_grados_lista, db_get_grado, db_del_grado, db_put_grado
 from .db import db_get_tipoextras_lista, db_get_tipoextra, db_del_tipoextra, db_put_tipoextra
 from .db import db_get_tipoeventos_lista, db_get_tipoevento, db_del_tipoevento, db_put_tipoevento
+from .db import db_get_agendas_lista, db_get_agenda, db_get_oradores
 
 from .notify import notify_component
 
@@ -74,9 +75,17 @@ class State(rx.State):
 	sel_tipoevento: str
 
 	eventos_lista: list[tuple]
+	eve_lista: list
+	evt_lista: list
 	sel_evento_str: str
 	sel_evento_tup: tuple
 	sel_evento: str
+
+	agendas_lista: list[tuple]
+	sel_agenda_str: str
+	sel_agenda_tup: tuple
+	sel_agenda: str
+	oradores: list
 
 	grados_lista: list[list]
 	sel_grado: str
@@ -172,13 +181,22 @@ class State(rx.State):
 		async with self:
 			if (form_data['nombre'] and form_data['descripcion']):
 				db_put_evento(form_data['id'], form_data['nombre'], form_data['descripcion'])
-				self.eventos_lista = db_get_eventos_lista()
 				self.opc = 'eve'
 			else:
 				self.error = 'Falta nombre o descripcion'
 		if (self.error != ''):
 			await self.handle_notify()
 
+	@rx.event(background=True)
+	async def handle_agenda_am(self, form_data: dict):
+		async with self:
+			if (form_data['evento'] and form_data['fecha'] and form_data['orador']):
+				db_put_agenda(form_data['id'], form_data['nombre'], form_data['descripcion'])
+				self.opc = 'age'
+			else:
+				self.error = 'Falta nombre o descripcion'
+		if (self.error != ''):
+			await self.handle_notify()
 
 
 	@rx.event(background=True)
@@ -344,6 +362,13 @@ class State(rx.State):
 			self.tipoextras_lista = db_get_tipoextras_lista()
 			self.opc = 'ext'
 
+# eventos agendas
+	@rx.event(background=True)
+	async def evt_agendas_lista(self):
+		async with self:
+			self.agendas_lista = db_get_agendas_lista()
+			self.opc = 'age'
+
 # eventos eventos
 	@rx.event(background=True)
 	async def evt_eventos_lista(self):
@@ -354,8 +379,19 @@ class State(rx.State):
 	@rx.event(background=True)
 	async def evt_evento_am(self, id):
 		async with self:
+			self.eve_lista = db_get_eve_lista()
 			self.sel_evento_tup = db_get_evento(id)
 			self.opc = 'evm'
+
+	@rx.event(background=True)
+	async def evt_agenda_am(self, agenda_id):
+		async with self:
+			self.evt_lista = db_get_evt_lista()
+			self.sel_agenda_tup = db_get_agenda(agenda_id)
+			self.oradores = db_get_oradores()
+			print(self.evt_lista, self.sel_agenda_tup)
+			self.opc = 'agm'
+
 
 	@rx.event(background=True)
 	async def evt_del_evento(self, evento_id):
@@ -364,6 +400,12 @@ class State(rx.State):
 			self.eventos_lista = db_get_eventos_lista()
 			self.opc = 'eve'
 
+	@rx.event(background=True)
+	async def evt_del_agenda(self, agenda_id):
+		async with self:
+			db_del_agenda(agenda_id)
+			self.agendas_lista = db_get_agendas_lista()
+			self.opc = 'age'
 
 # eventos tipoeventos
 	@rx.event(background=True)
@@ -397,6 +439,8 @@ class State(rx.State):
 			self.selected_casa = 'Todas'
 			self.selected_grado = 'Todos'
 			self.personas = db_get_personas_lista('', self.selected_estado, self.selected_casa, self.selected_grado)
+			print(self.select_estados_total)
+			print(self.selected_estado)
 			self.opc = "per"
 
 	@rx.event(background=True)
@@ -496,6 +540,9 @@ def index() -> rx.Component:
 
 					('eve', fnc_eventos_lista(State.eventos_lista)),
 					('evm', fnc_evento_am(State.sel_evento_tup)),
+
+					('age', fnc_agendas_lista(State.agendas_lista)),
+					('agm', fnc_agenda_am(State.sel_agenda_str, State.oradores)),
 
 				),
 				spacing="5",
@@ -725,7 +772,7 @@ def fnc_evento_am(evento) -> rx.Component:
 						rx.input(value=evento[0], type='text', name='id', style={'width':'0px', 'height':'0px'}),
 						rx.hstack(
 							rx.text('Tipo de Evento: '),
-							# rx.select(State.tipoeventos_lista, default_value=evento[1], value=evento[1], name='tipoevento'),
+							rx.select(State.eve_lista, default_value=evento[1], value=evento[1], name='tipoevento'),
 						),
 						rx.hstack(
 							rx.text('Nombre: '),
@@ -746,6 +793,84 @@ def fnc_evento_am(evento) -> rx.Component:
 		margin_y='2vw'
 	)
 
+################# Agendas
+
+def fnc_agenda(agenda: list) -> rx.Component:
+	return rx.table.row(
+		rx.table.cell(agenda[2]),
+		rx.table.cell(agenda[3]),
+		rx.table.cell(agenda[4]),
+		rx.table.cell(
+			rx.hstack(
+				rx.button(rx.icon('pencil'), on_click=State.evt_agenda_am(agenda[0], agenda[1])),
+				fnc_del_confirmation(agenda[0], State.evt_del_agenda),
+			)
+		)
+	)
+
+def fnc_agendas_lista(agendas) -> rx.Component:
+	return rx.box(
+			rx.card(
+				rx.heading('AGENDAS', align='center'),
+				rx.text(
+					rx.button(rx.icon('plus'), 'AGENDA'), 
+					align='right', 
+					on_click=State.evt_agenda_am(0)
+				),
+			),
+				rx.card(
+
+		rx.table.root(
+			rx.table.row(
+				rx.table.column_header_cell('Evento', width='20%'),
+				rx.table.column_header_cell('Fecha', width='20%'),
+				rx.table.column_header_cell('Orador', width='50%'),
+				rx.table.column_header_cell('Acciones', width='10%'),
+			),
+			rx.table.body(
+				rx.foreach(agendas, fnc_agenda),
+			),
+		),
+		),
+		width='100%'
+	)
+
+def fnc_agenda_am(agenda, oradores) -> rx.Component:
+	return rx.center(
+		rx.box(
+			rx.card(
+				rx.cond(
+					agenda[0] == 0,
+					rx.text('NUEVA AGENDA', weight="bold", align='center'),
+					rx.text('MODIFICACION AGENDA', weight="bold", align='center')
+				),
+			),
+			rx.card(
+				rx.form(
+					rx.vstack(
+						rx.input(value=agenda[0], type='text', name='agenda_id', style={'width':'0px', 'height':'0px'}),
+						rx.hstack(
+							rx.text('Evento: '),
+							rx.select(State.evt_lista, default_value=agenda[1], value=agenda[1], name='evento'),
+						),
+						rx.hstack(
+							rx.text('Fecha: '),
+							rx.input(type='date', default_value=agenda[2], name='fecha', style={'width':'200px'}),
+						),
+						rx.hstack(
+							rx.text('Orador: '),
+							rx.select(oradores, default=agenda[3], name = 'orador', style={'width':'200px'}),
+						),
+						rx.button('Confirmar', type='submit', style={'width':'100%'})
+					),
+					on_submit=State.handle_agenda_am,
+					reset_on_submit=True,
+				)
+			)
+		),
+		width='100%',
+		margin_y='2vw'
+	)
 
 
 
@@ -1076,8 +1201,6 @@ def fnc_persona_am(persona: list, estados, casas, docs) -> rx.Component:
 										rx.hstack(
 											rx.text('Foto'),
 											rx.image(src=persona[22], width='160px', high='auto'),
-											# rx.checkbox(name='eliminar_foto', label='Eliminar'),
-											# rx.text('Eliminar'),
 										),
 										rx.input(type='file', name='foto', accept='image/*'),
 									),
@@ -1089,8 +1212,6 @@ def fnc_persona_am(persona: list, estados, casas, docs) -> rx.Component:
 										rx.hstack(
 											rx.text('Certificado'),
 											rx.image(src=persona[23], width='150px', high='auto'),
-											# rx.checkbox(name='eliminar_cert', label='Eliminar', justify_y='50px'),
-											# rx.text('Eliminar'),
 										),
 										rx.input(type='file', name='certificado', accept='image/*'),
 									),
@@ -1131,6 +1252,8 @@ def fnc_personas(personas, estados, casas, grados) -> rx.Component:
 				rx.form(
 					rx.hstack(
 						rx.input(placeholder='Buscar...', type='text', name='busq'),
+						rx.text(estados),
+						rx.text(State.selected_estado),
 						rx.select(estados, name='estado', defaut_value=State.selected_estado, on_change=State.evt_select_estado),
 						rx.select(casas, name='casa', default_value=State.selected_casa, on_change=State.evt_select_casa),
 						rx.select(grados, name='grado', default_value=State.selected_grado, on_change=State.evt_select_grado),
@@ -1426,7 +1549,7 @@ def fnc_menu() -> rx.Component:
 		rx.box(
 			rx.hstack(
 				rx.button(rx.icon('users-round'), 'Personas', on_click=State.evt_personas()),
-				rx.button(rx.icon('calendar-days'), 'Agenda'),
+				rx.button(rx.icon('calendar-days'), 'Agenda', on_click=State.evt_agendas_lista()),
 				rx.button(rx.icon('ticket'), 'Eventos', on_click=State.evt_eventos_lista()),
 				rx.button(rx.icon('house'), 'Casas', on_click=State.evt_casas_lista()),
 				rx.button(rx.icon('graduation-cap'), 'Grados', on_click=State.evt_grados_lista()),
